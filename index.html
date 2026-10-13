@@ -1,0 +1,1718 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Template MPI</title>
+<style>
+  /* ====== KONFIGURASI WARNA (boleh diubah sesuai tema materi) ====== */
+  :root {
+    --primary: #C1121F; 
+    --primary-tua: #780000;
+    --accent: #1A1A1A;
+    --accent-tua: #000000;
+    --tinta: #1A1A1A;
+    --krem: #FFFFFF;
+    --krem-2: #F8F9FA; 
+    --garis: #E0E0E0;
+    --hijau: #2ECC71;
+    --hijau-tua: #27AE60;
+    --salah: #B30000; 
+    --biru-muda: #FDEDEE;
+    --emas: #F1C40F;
+    --emas-tua: #B8860B;
+    --oren: #FF9F45;
+    --oren-tua: #E8590C;
+    --bayang: 0 16px 32px rgba(193, 18, 31, 0.18);
+    --bayang-kecil: 0 8px 20px rgba(0, 0, 0, 0.10);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; width: 100%;
+    background: #DFE6E9; overflow: hidden;
+    font-family: 'Nunito', 'Segoe UI', Tahoma, system-ui, sans-serif;
+    color: var(--tinta); touch-action: manipulation;
+  }
+  #viewport { position: fixed; inset: 0; overflow: hidden; }
+  #stage {
+    position: absolute; top: 0; left: 0; width: 1280px; height: 720px;
+    transform-origin: top left; background: var(--krem-2);
+    overflow: hidden; user-select: none; border-radius: 20px;
+  }
+  .screen { position: absolute; inset: 0; display: none; flex-direction: column; }
+  .screen.active { display: flex; animation: fade .4s cubic-bezier(0.4, 0, 0.2, 1); }
+  @keyframes fade { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: none; } }
+  .bg { position: absolute; inset: 0; background-size: cover; background-position: center; z-index: 0; }
+  .bg:not(:has(img)) { background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%); }
+  .bg img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
+  /* ====== Topbar & Navbar ====== */
+  .topbar {
+    position: relative; z-index: 5; height: 80px; flex: 0 0 80px;
+    display: flex; align-items: center; gap: 14px; padding: 0 30px;
+    background: #FFFFFF; border-bottom: 2px solid var(--garis);
+    border-radius: 0 0 40px 40px; box-shadow: var(--bayang-kecil);
+  }
+  .topbar .judul-bar { font-weight: 800; font-size: 22px; color: var(--primary-tua); }
+  .topbar .judul-bar small { display: block; font-weight: 600; font-size: 14px; opacity: 0.7; }
+  .spacer { flex: 1; }
+  .progress-wrap { display: flex; align-items: center; gap: 12px; color: var(--primary-tua); }
+  .progress-track { width: 200px; height: 16px; border-radius: 99px; background: #E2E8F0; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--accent-tua)); transition: width .5s ease; }
+  .progress-label { font-size: 14px; font-weight: 800; }
+  .skor-badge {
+    background: #FFF9E6; border: 3px solid #F1C40F; padding: 6px 18px;
+    border-radius: 99px; font-weight: 900; font-size: 18px; color: #856404;
+    display: flex; align-items: center; gap: 8px; box-shadow: var(--bayang-kecil);
+  }
+  .icon-btn {
+    width: 50px; height: 50px; border: none; border-radius: 50%; cursor: pointer;
+    background: var(--krem-2); color: var(--primary); font-size: 22px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; transition: all .2s; box-shadow: var(--bayang-kecil);
+  }
+  .icon-btn:active { transform: scale(.9); }
+  .content { position: relative; z-index: 4; flex: 1; padding: 30px 40px; overflow: hidden; display: flex; flex-direction: column; }
+  .center-col { display: flex; flex-direction: column; height: 100%; min-height: 0; justify-content: center; }
+  .navbar {
+    position: relative; z-index: 5; height: 90px; flex: 0 0 90px; display: flex; align-items: center; justify-content: space-between; padding: 0 30px;
+    background: #FFFFFF; border-top: 2px solid var(--garis); border-radius: 40px 40px 0 0; box-shadow: 0 -8px 20px rgba(0,0,0,0.03);
+  }
+  .nav-btn {
+    min-width: 190px; height: 56px; padding: 0 30px; border: none; border-radius: 99px; cursor: pointer; font-size: 18px; font-weight: 800; color: #fff;
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px; box-shadow: var(--bayang-kecil); transition: all .2s;
+  }
+  .nav-btn:active { transform: translateY(2px) scale(.98); }
+  .nav-btn[disabled] { opacity: .4; cursor: not-allowed; }
+  .nav-back { background: #95A5A6; }
+  .nav-next { background: linear-gradient(135deg, var(--accent), var(--accent-tua)); }
+  .btn { border: none; border-radius: 99px; cursor: pointer; font-weight: 800; color: #fff; box-shadow: var(--bayang-kecil); transition: all .2s; }
+  .btn:active { transform: translateY(2px) scale(.96); }
+  .btn-merah { background: linear-gradient(135deg, var(--salah), #C0392B); }
+  .btn-biru { background: linear-gradient(135deg, #1D3557, #457B9D); }
+  .btn-kuning { background: linear-gradient(135deg, var(--accent), var(--accent-tua)); color: #fff; }
+  /* ====== JUDUL & MENU ====== */
+  #scr-judul .bg::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.22) 50%, rgba(0,0,0,0.55) 100%), linear-gradient(135deg, rgba(230,57,70,0.18) 0%, rgba(29,53,87,0.16) 100%); }
+  #scr-judul .bg img { opacity: 1; z-index: 0; } 
+  .judul-center { position: relative; z-index: 4; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; padding: 20px; }
+  .pita { background: #FFFFFF; color: var(--primary-tua); font-weight: 800; padding: 10px 28px; border-radius: 99px; font-size: 16px; box-shadow: var(--bayang-kecil); }
+  .judul-utama { color: #FFFFFF; font-size: 64px; font-weight: 900; line-height: 1.1; margin: 10px 0 0; text-shadow: 0 2px 6px rgba(0,0,0,0.65), 0 8px 24px rgba(0,0,0,0.5); }
+  .judul-sub { color: #F1FAEE; font-size: 26px; font-weight: 700; margin: 0; text-shadow: 0 2px 6px rgba(0,0,0,0.7); }
+  .mulai-btn { margin-top: 24px; height: 80px; padding: 0 60px; font-size: 28px; border-radius: 99px; }
+  .judul-topright { position: absolute; top: 24px; right: 30px; z-index: 6; display: flex; gap: 14px; }
+  .pengampu-pojok {
+    position: absolute; left: 30px; bottom: 26px; z-index: 6; cursor: pointer;
+    background: rgba(255,255,255,0.92); backdrop-filter: blur(2px);
+    border-radius: 20px; padding: 10px 22px; box-shadow: var(--bayang-kecil);
+    border-left: 6px solid var(--emas); display: flex; flex-direction: column; gap: 2px;
+    transition: transform .2s;
+  }
+  .pengampu-pojok:active { transform: scale(.97); }
+  .pengampu-pojok .pengampu-label { font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--primary-tua); opacity: .85; }
+  .pengampu-pojok .pengampu-nama { font-size: 19px; font-weight: 900; color: var(--accent-tua); }
+  .img-deco { width: 170px; height: 170px; filter: drop-shadow(0 10px 15px rgba(255,255,255,0.2)); object-fit: contain; }
+  #scr-menu .bg { background: linear-gradient(180deg, #FDF2E9, #F1FAEE); }
+  .menu-head { position: relative; z-index: 4; text-align: center; padding: 30px 20px 10px; }
+  .menu-head h2 { font-size: 38px; margin: 0; color: var(--primary-tua); font-weight: 900; }
+  .menu-cards { position: relative; z-index: 4; flex: 1; display: flex; gap: 22px; align-items: center; justify-content: center; padding: 20px 30px 40px; flex-wrap: wrap; }
+  .menu-card {
+    width: 260px; height: 340px; border-radius: 36px; cursor: pointer; color: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    box-shadow: 0 15px 35px rgba(230, 57, 70, 0.2); transition: all .3s; padding: 24px; text-align: center; border: 4px solid rgba(255,255,255,0.3);
+  }
+  .menu-card:active { transform: scale(.98); }
+  .menu-card .img-ikon { width: 96px; height: 96px; object-fit: contain; margin-bottom: 8px; filter: drop-shadow(0 8px 10px rgba(0,0,0,0.2)); }
+  .menu-card .mc-judul { font-size: 27px; font-weight: 900; }
+  .menu-card .mc-sub { font-size: 15px; font-weight: 600; background: rgba(0,0,0,0.1); padding: 7px 14px; border-radius: 99px; }
+  .mc-belajar { background: linear-gradient(135deg, #1D3557, #457B9D); }
+  .mc-bermain { background: linear-gradient(135deg, var(--primary), var(--primary-tua)); }
+  .mc-berlatih { background: linear-gradient(135deg, var(--accent), var(--accent-tua)); }
+  .mc-labmaya { background: linear-gradient(135deg, var(--hijau), var(--hijau-tua)); }
+  .mc-video { background: linear-gradient(135deg, var(--emas), var(--emas-tua)); }
+  .mc-wordwall { background: linear-gradient(135deg, #8E44AD, #5B2C83); }
+  .menu-card .emoji-ikon { width: 96px; height: 96px; margin-bottom: 8px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 52px; filter: drop-shadow(0 8px 10px rgba(0,0,0,0.2)); }
+  .mc-sertifikat { background: linear-gradient(135deg, var(--emas), var(--oren-tua)); }
+  .mc-sertifikat.terkunci { background: linear-gradient(135deg, #A9B2BB, #7C8792); cursor: default; }
+  .mc-sertifikat.terkunci .img-ikon { filter: grayscale(1) opacity(0.8); }
+  /* ====== MOTIF BATIK NUSANTARA (nuansa dekoratif, elegan & halus) ====== */
+  .batik-motif { position: relative; }
+  .batik-motif::before {
+    content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none; border-radius: inherit;
+    opacity: 0.07; background-repeat: repeat; background-size: 84px 84px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='84' viewBox='0 0 84 84'%3E%3Cg fill='none' stroke='%23780000' stroke-width='2'%3E%3Ccircle cx='21' cy='21' r='15'/%3E%3Ccircle cx='63' cy='21' r='15'/%3E%3Ccircle cx='21' cy='63' r='15'/%3E%3Ccircle cx='63' cy='63' r='15'/%3E%3Ccircle cx='42' cy='42' r='15'/%3E%3C/g%3E%3C/svg%3E");
+  }
+  .topbar > *, .navbar > * { position: relative; z-index: 1; }
+  .judul-topright-ornamen { position: absolute; left: 0; right: 0; top: 0; bottom: 0; z-index: 1; pointer-events: none; opacity: 0.10; background-repeat: repeat; background-size: 120px 120px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='none' stroke='%23FFFFFF' stroke-width='2'%3E%3Cpath d='M0 30 L30 0 M0 90 L90 0 M30 120 L120 30 M90 120 L120 90'/%3E%3C/g%3E%3C/svg%3E"); }
+  /* ====== VIDEO INTERAKTIF ====== */
+  .video-grid { position: relative; z-index: 4; display: grid; grid-template-columns: 1fr 1fr; gap: 22px; padding: 6px 14px 30px; overflow-y: auto; }
+  .video-card { background: #fff; border-radius: 26px; overflow: hidden; box-shadow: var(--bayang-kecil); border: 3px solid var(--garis); display: flex; flex-direction: column; }
+  .video-frame { position: relative; width: 100%; padding-top: 56.25%; background: #000; }
+  .video-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .video-info { padding: 16px 22px 20px; display: flex; flex-direction: column; gap: 8px; }
+  .video-judul { font-weight: 900; font-size: 19px; color: var(--primary-tua); line-height: 1.25; }
+  .video-desk { font-size: 14.5px; color: var(--tinta); opacity: .85; line-height: 1.45; }
+  .video-link { align-self: flex-start; height: 42px; padding: 0 22px; font-size: 15px; margin-top: 4px; text-decoration: none; display: inline-flex; align-items: center; }
+  /* ====== LAB MAYA (TEMA HIJAU) ====== */
+  .lab-scroll { flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-right:6px; }
+  .lab-nav-tabs { display:flex; gap:10px; padding:14px 40px 0; }
+  .lab-tab { flex:1; border:3px solid var(--garis); background:#fff; border-radius:16px; padding:12px 10px; font-weight:800; font-size:16px; cursor:pointer; color:var(--tinta); transition:all .2s; }
+  .lab-tab.aktif { border-color:var(--hijau-tua); background:linear-gradient(135deg,var(--hijau),var(--hijau-tua)); color:#fff; }
+  /* --- Lab 1: laboratorium sortir (kartu digerakkan ke tabung) --- */
+  .lab-sort-head { text-align:center; margin-bottom:8px; }
+  .lab-sort-head h2 { margin:0; font-size:24px; color:var(--hijau-tua); font-weight:900; }
+  .lab-sort-head small { display:block; font-size:14px; color:var(--tinta); opacity:.7; margin-top:2px; }
+  .lab-tabs-sub { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin:10px 0 6px; }
+  .lab-tab-mini { border:2px solid var(--garis); background:#fff; padding:8px 16px; border-radius:99px; font-size:14px; font-weight:800; cursor:pointer; color:var(--tinta); transition:all .2s; }
+  .lab-tab-mini.aktif { background:linear-gradient(135deg,var(--hijau),var(--hijau-tua)); color:#fff; border-color:var(--hijau-tua); }
+  .lab-tab-mini.selesai::after { content:' ✔'; }
+  .lab-sampel-pool { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; padding:14px 10px; min-height:64px; }
+  .lab-sampel { background:#fff; border:3px solid var(--hijau); border-radius:16px; padding:12px 18px; font-weight:800; font-size:16px; cursor:pointer; box-shadow:var(--bayang-kecil); transition:all .15s; color:var(--tinta); }
+  .lab-sampel:active { transform:scale(.95); }
+  .lab-sampel.dipilih { border-color:var(--hijau-tua); background:#ECFDF5; transform:scale(1.06); box-shadow:0 0 0 4px rgba(46,204,113,0.25); }
+  .lab-sampel.dipakai { opacity:0; pointer-events:none; }
+  .lab-tabung-wrap { display:flex; gap:18px; padding:6px 10px 10px; min-height:240px; }
+  .lab-tabung { flex:1; border:4px dashed #A7E9C4; border-radius:24px; background:#F8FFFB; display:flex; flex-direction:column; align-items:center; padding:14px; cursor:pointer; transition:all .2s; max-height:280px; overflow-y:auto; }
+  .lab-tabung:hover { background:#ECFDF5; border-color:var(--hijau); }
+  .lab-tabung.goyang { animation:shake .4s; border-color:var(--salah); background:#FEF2F2; }
+  .tabung-label { font-weight:900; font-size:19px; color:var(--hijau-tua); margin-bottom:2px; text-align:center; }
+  .tabung-desc { font-size:12.5px; color:var(--tinta); opacity:.75; margin-bottom:10px; text-align:center; line-height:1.3; }
+  .tabung-isi { display:flex; flex-direction:column; gap:6px; width:100%; }
+  .tabung-item { background:linear-gradient(135deg,var(--hijau),var(--hijau-tua)); color:#fff; border-radius:12px; padding:7px 12px; font-weight:700; font-size:14px; text-align:center; box-shadow:0 4px 8px rgba(0,0,0,0.1); }
+  /* --- Lab 2: bedah teks deskriptif --- */
+  .lab-sim-timeline { display:flex; gap:6px; justify-content:center; margin-bottom:10px; }
+  .lab-sim-dot { flex:1; max-width:150px; border:3px solid var(--garis); background:#fff; border-radius:14px; padding:8px 6px; font-size:12.5px; font-weight:800; text-align:center; cursor:pointer; color:var(--tinta); transition:all .2s; }
+  .lab-sim-dot.aktif { border-color:var(--hijau-tua); background:linear-gradient(135deg,var(--hijau),var(--hijau-tua)); color:#fff; }
+  .lab-avatar-stage { position:relative; height:190px; background:linear-gradient(160deg,#EAFBF1,#F1FAEE); border-radius:22px; border:3px solid #D8F3E4; overflow:hidden; margin-bottom:12px; flex-shrink:0; }
+  .lab-avatar { position:absolute; width:42px; height:42px; margin-left:-21px; margin-top:-21px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow:0 6px 10px rgba(0,0,0,0.18); transition:left 1s ease, top 1s ease, background 0.6s ease, opacity 0.6s ease; }
+  .lab-avatar.goyang-avt { animation:shake .5s infinite; }
+  .lab-stage-card { background:#fff; border-left:8px solid var(--hijau-tua); border-radius:16px; padding:12px 20px; box-shadow:var(--bayang-kecil); margin-bottom:10px; }
+  .lab-cerita-box { background:#FFF9E6; border:2px dashed var(--emas-tua); border-radius:14px; padding:12px 18px; margin-top:10px; font-size:16px; line-height:1.5; color:var(--tinta); }
+  .lab-stage-card h3 { margin:0 0 4px; color:var(--hijau-tua); font-size:19px; }
+  .lab-stage-card p { margin:0; font-size:15px; line-height:1.4; color:var(--tinta); }
+  .lab-sim-controls { display:flex; gap:12px; justify-content:center; margin-bottom:10px; }
+  .lab-urut-box { background:#F8FFFB; border:2px dashed #A7E9C4; border-radius:20px; padding:14px 18px; margin-top:6px; }
+  .lab-urut-box h3 { margin:0 0 10px; color:var(--hijau-tua); font-size:18px; text-align:center; }
+  /* --- Lab 3: language features (tema OREN, kartu akordeon) --- */
+  .lab-tab.lab-tab-oren.aktif { border-color:var(--oren-tua); background:linear-gradient(135deg,var(--oren),var(--oren-tua)); color:#fff; }
+  .lab-jelas-head { text-align:center; margin-bottom:6px; }
+  .lab-jelas-head h2 { margin:0; font-size:24px; color:var(--oren-tua); font-weight:900; }
+  .lab-jelas-wrap { display:flex; flex-direction:column; gap:14px; padding:8px 4px 10px; }
+  .lab-jelas-card { background:#fff; border:3px solid var(--oren); border-radius:20px; padding:16px 22px; box-shadow:var(--bayang-kecil); cursor:pointer; transition:all .2s; }
+  .lab-jelas-card:active { transform:scale(.99); }
+  .lab-jelas-card.buka { border-color:var(--oren-tua); background:#FFF6EC; }
+  .lab-jelas-card-head { display:flex; align-items:center; gap:14px; }
+  .lab-jelas-badge { flex:0 0 46px; width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:18px; color:#fff; box-shadow:var(--bayang-kecil); }
+  .lab-jelas-titik { flex:1; }
+  .lab-jelas-titik h3 { margin:0; font-size:19px; color:var(--oren-tua); }
+  .lab-jelas-titik small { display:block; font-size:14px; color:var(--tinta); opacity:.75; margin-top:2px; }
+  .lab-jelas-panah { font-size:18px; color:var(--oren-tua); transition:transform .25s; flex:0 0 auto; }
+  .lab-jelas-card.buka .lab-jelas-panah { transform:rotate(180deg); }
+  .lab-jelas-body { max-height:0; overflow:hidden; transition:max-height .35s ease; }
+  .lab-jelas-card.buka .lab-jelas-body { max-height:420px; }
+  .lab-jelas-body-in { padding-top:12px; font-size:15.5px; line-height:1.5; color:var(--tinta); }
+  /* ====== BELAJAR (SATU FRAME: GAMBAR KIRI + TEKS KANAN) ====== */
+  .belajar-frame { flex:1; display:flex; min-height:0; background:#fff; border-radius:32px; box-shadow:var(--bayang); overflow:hidden; border:3px solid var(--garis); }
+  .belajar-img-sisi { flex:0 0 35%; max-width:35%; background:linear-gradient(160deg,#FFF6ED,#FDF2E9); display:flex; align-items:center; justify-content:center; padding:16px; border-right:3px solid var(--garis); }
+  .belajar-img-sisi img { width:100%; height:100%; max-width:100%; max-height:100%; object-fit:contain; filter:drop-shadow(0 12px 18px rgba(0,0,0,0.12)); border-radius:16px; }
+  .belajar-teks-sisi { flex:1 1 65%; padding:34px 46px; overflow-y:auto; display:flex; flex-direction:column; gap:18px; }
+  .belajar-teks-sisi h2 { margin:0; font-size:34px; color:var(--primary-tua); font-weight:900; line-height:1.15; }
+  .belajar-intro { background:linear-gradient(135deg,var(--primary),var(--primary-tua)); color:#fff; padding:16px 24px; border-radius:20px; font-size:22px; font-weight:800; line-height:1.3; }
+  .belajar-isi { font-size:21px; line-height:1.6; color:var(--tinta); }
+  .belajar-isi ul { margin:10px 0 0; padding-left:22px; }
+  .belajar-isi li { margin-bottom:8px; }
+  .belajar-isi b { color: var(--primary-tua); }
+  .belajar-kuis { margin-top:auto; padding:18px 20px; background:var(--biru-muda); border:2px dashed var(--primary); border-radius:20px; }
+  .belajar-kuis .bk-tanya { font-weight:800; color:var(--primary-tua); font-size:19px; margin:0 0 12px; }
+  .belajar-kuis .bk-opsi { display:flex; gap:12px; flex-wrap:wrap; }
+  /* ====== SOAL & INTERAKTIF ====== */
+  .akt-instruksi { font-size: 22px; margin: 0 0 20px; background: #fff; padding: 12px 24px; border-radius: 16px; display: inline-block; box-shadow: var(--bayang-kecil); text-align: center; border: 2px solid var(--garis); }
+  .soal { background: #FFFFFF; border-radius: 28px; padding: 24px 30px; font-size: 24px; font-weight: 800; line-height: 1.4; margin-bottom: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); color: var(--primary-tua); border-left: 10px solid var(--primary); }
+  .opsi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .opsi { background: #FFFFFF; border: 3px solid var(--garis); border-radius: 24px; padding: 20px 24px; font-size: 22px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); transition: all .2s; color: var(--tinta); }
+  .opsi:hover { border-color: var(--primary); background: var(--biru-muda); }
+  .opsi .bul { width: 44px; height: 44px; flex: 0 0 44px; border-radius: 50%; background: var(--garis); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 20px; color: var(--primary-tua); transition: all .2s; }
+  .opsi:hover .bul { background: var(--primary); color: #fff; }
+  .opsi.benar { border-color: var(--hijau-tua); background: #ECFDF5; color: var(--hijau-tua); }
+  .opsi.benar .bul { background: var(--hijau-tua); color: #fff; }
+  .opsi.salah { border-color: var(--salah); background: #FEF2F2; color: var(--salah); }
+  .opsi.salah .bul { background: var(--salah); color: #fff; }
+  .opsi-kompleks { cursor: pointer; border: 4px solid var(--garis); background: #fff; }
+  .opsi-kompleks.terpilih { border-color: var(--primary); background: var(--biru-muda); }
+  .opsi-kompleks.terpilih .bul { background: var(--primary); color: #fff; }
+  /* ====== TATA LETAK DUA SISI — khusus PG & PG Kompleks (jenjang SMA) ====== */
+  /* Sisi kiri = pertanyaan (+gambar/stimulus opsional), sisi kanan = opsi A–E */
+  .soal-split { display: flex; gap: 26px; flex: 1; min-height: 0; align-items: stretch; }
+  .soal-split .soal-kiri {
+    flex: 0 0 44%; max-width: 44%;
+    background: #FFFFFF; border-radius: 28px; padding: 26px 30px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05); border-left: 10px solid var(--primary);
+    overflow-y: auto; display: flex; flex-direction: column; gap: 14px;
+  }
+  .soal-split .soal-kiri .soal-label { font-size: 14px; font-weight: 900; color: var(--primary); letter-spacing: 2px; text-transform: uppercase; }
+  .soal-split .soal-kiri .soal-teks { font-size: 23px; font-weight: 800; line-height: 1.45; color: var(--primary-tua); }
+  .soal-split .soal-kiri .soal-stimulus { font-size: 18px; font-weight: 600; line-height: 1.6; color: var(--tinta); background: var(--krem-2); border-radius: 16px; padding: 14px 18px; border: 1px solid var(--garis); }
+  .soal-split .soal-kiri .soal-stimulus b { color: var(--primary-tua); }
+  .soal-split .soal-kiri .soal-img { width: 100%; max-height: 320px; object-fit: contain; border-radius: 18px; background: #fff; padding: 12px; border: 2px solid var(--garis); box-shadow: var(--bayang-kecil); }
+  .soal-split .opsi-kanan { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; justify-content: center; }
+  .soal-split .opsi-list { display: flex; flex-direction: column; gap: 12px; }
+  .soal-split .opsi-kanan .opsi { font-size: 20px; padding: 15px 20px; }
+  .soal-split .opsi-kanan .opsi .bul { width: 40px; height: 40px; flex: 0 0 40px; font-size: 18px; }
+  .soal-split .opsi-kanan .feedback { margin-top: 6px; font-size: 18px; padding: 14px 20px; }
+  .kalimat-drag { font-size: 26px; line-height: 2; font-weight: 700; background: #fff; padding: 30px; border-radius: 28px; box-shadow: var(--bayang-kecil); border: 2px solid var(--garis); }
+  .blank-slot { display: inline-block; min-width: 120px; height: 44px; border-bottom: 4px dashed var(--primary); margin: 0 10px; vertical-align: middle; text-align: center; color: var(--primary-tua); font-weight: 900; cursor: pointer; background: var(--biru-muda); border-radius: 8px 8px 0 0; }
+  .blank-slot.terisi { border-bottom-style: solid; background: #D0EEFF; border-bottom-color: var(--primary-tua); }
+  .word-pool { display: flex; gap: 16px; margin-top: 24px; flex-wrap: wrap; justify-content: center; }
+  .word-btn { background: linear-gradient(135deg, var(--accent), var(--accent-tua)); border: none; padding: 12px 24px; font-size: 22px; font-weight: 800; border-radius: 16px; cursor: pointer; box-shadow: var(--bayang-kecil); transition: transform 0.2s; color: #fff; }
+  .word-btn:active { transform: scale(0.95); }
+  .word-btn.dipakai { opacity: 0; pointer-events: none; }
+  .jodoh-wrap { position: relative; display: flex; gap: 30px; flex: 1; min-height: 0; justify-content: center; z-index: 1; }
+  .jodoh-kol { flex: 1; display: flex; flex-direction: column; gap: 14px; justify-content: center; z-index: 2; }
+  .pair-item { 
+    position: relative; z-index: 2;
+    border: 3px solid var(--garis); background: #fff; border-radius: 24px; 
+    padding: 12px 20px; font-size: 20px; font-weight: 700; cursor: pointer; 
+    display: flex; align-items: center; justify-content: flex-start; gap: 18px; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.02); min-height: 96px; text-align: left; color: var(--tinta); transition: all 0.2s;
+  }
+  .pair-item:hover { border-color: var(--primary); background: var(--biru-muda); }
+  .pair-item img.img-pair { width: 78px; height: 78px; object-fit: contain; flex-shrink: 0; background: #fff; border: 2px solid var(--garis); border-radius: 14px; padding: 6px; }
+  .pair-item.sel { border-color: var(--accent); background: #FFF9E6; transform: scale(1.02); box-shadow: var(--bayang-kecil); color: var(--accent-tua); }
+  .pair-item.locked { border-color: var(--hijau-tua); background: #ECFDF5; cursor: default; color: var(--hijau-tua); }
+  .pair-item.salah { border-color: var(--salah); background: #FEF2F2; animation: shake 0.4s; color: var(--salah); }
+  @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-5px);} 75%{transform:translateX(5px);} }
+  .shake-sekali { animation: shake .4s; }
+  @keyframes drawLine { to { stroke-dashoffset: 0; } }
+  .jodoh-line { stroke-dasharray: 1000; stroke-dashoffset: 1000; animation: drawLine 0.5s ease-in-out forwards; }
+  .scene-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; flex: 1; }
+  .obj-card { 
+    background: #fff; border: 3px solid var(--garis); border-radius: 28px; 
+    padding: 20px; font-size: 22px; font-weight: 700; cursor: pointer; 
+    display: flex; flex-direction: column; align-items: center; justify-content: center; 
+    gap: 16px; text-align: center; box-shadow: var(--bayang-kecil); transition: all 0.2s; color: var(--tinta);
+  }
+  .obj-card:hover { border-color: var(--primary); background: var(--biru-muda); }
+  .obj-card img.img-obj { width: auto; height: 180px; max-width: 100%; object-fit: contain; background: #fff; border-radius: 18px; padding: 10px; filter: drop-shadow(0 5px 8px rgba(0,0,0,0.10)); }
+  .obj-card.benar { border-color: var(--hijau-tua); background: #ECFDF5; color: var(--hijau-tua); }
+  .obj-card.salah { border-color: var(--salah); background: #FEF2F2; color: var(--salah); }
+  .urut-item { 
+    background: #fff; border: 2px solid var(--garis); border-radius: 24px; padding: 12px 20px; 
+    font-size: 20px; font-weight: 700; display: flex; align-items: center; 
+    gap: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); margin-bottom: 12px; 
+    min-height: 70px; color: var(--tinta);
+  }
+  .urut-item .num { background: var(--primary); color: #fff; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; flex-shrink: 0; }
+  .urut-item > span:nth-child(2) { flex: 1; line-height: 1.3; } 
+  .urut-item .btn-kuning { flex: 0 0 auto; width: 44px; height: 44px; padding: 0; display:flex; align-items:center; justify-content:center; font-size: 18px; } 
+  .bs-grid { display: flex; gap: 24px; }
+  .bs-btn { flex: 1; height: 120px; border-radius: 40px; border: none; font-size: 36px; font-weight: 900; color: #fff; cursor: pointer; box-shadow: var(--bayang-kecil); transition: all 0.2s; }
+  .bs-btn:active { transform: scale(0.95); }
+  .bs-benar { background: linear-gradient(135deg, var(--hijau), var(--hijau-tua)); }
+  .bs-salah { background: linear-gradient(135deg, var(--salah), #C0392B); }
+  .feedback { border-radius: 24px; padding: 18px 24px; font-size: 20px; font-weight: 700; line-height: 1.5; display: none; text-align: center; margin-top: 16px; }
+  .feedback.show { display: block; }
+  .feedback.ok { background: #D1FAE5; border: 3px solid var(--hijau-tua); color: var(--hijau-tua); }
+  .feedback.no { background: #FEE2E2; border: 3px solid var(--salah); color: var(--salah); }
+  /* ====== GAME: KUMPUL (ketuk berwaktu) ====== */
+  .kumpul-hud { display: flex; justify-content: center; gap: 20px; align-items: center; margin-bottom: 14px; }
+  .kumpul-hud .hud-box { background: #fff; padding: 8px 24px; border-radius: 99px; font-weight: 900; font-size: 22px; box-shadow: var(--bayang-kecil); border: 3px solid var(--garis); }
+  .kumpul-hud .hud-time { color: var(--salah); border-color: var(--salah); }
+  .kumpul-hud .hud-coll { color: var(--hijau-tua); border-color: var(--hijau-tua); }
+  .kumpul-area { position: relative; width: 100%; flex: 1; min-height: 0; background: radial-gradient(circle at 50% 40%, #FFFDF5, #FDF2E9); border: 4px dashed var(--accent); border-radius: 28px; overflow: hidden; box-shadow: inset 0 4px 14px rgba(0,0,0,0.04); }
+  .kumpul-flag { position: absolute; width: 92px; cursor: pointer; animation: floatUp 0.25s ease; }
+  .kumpul-flag:active { transform: scale(0.85); }
+  @keyframes floatUp { from { transform: scale(0) rotate(-15deg); } to { transform: scale(1) rotate(0); } }
+  .kumpul-flag img { width: 100%; height: auto; pointer-events: none; filter: drop-shadow(0 5px 8px rgba(0,0,0,0.25)); border-radius: 4px; }
+  /* ====== GAME: SAMBUNG (lanjutkan urutan) ====== */
+  .sambung-lirik { background: linear-gradient(135deg, var(--primary), var(--primary-tua)); color:#fff; padding: 26px 30px; border-radius: 28px; font-size: 28px; font-weight: 800; text-align:center; line-height:1.4; box-shadow: var(--bayang); }
+  .sambung-opsi { display:flex; flex-direction: column; gap: 14px; margin-top: 22px; }
+  .sambung-btn { background:#fff; border: 3px solid var(--garis); border-radius: 20px; padding: 18px 24px; font-size: 23px; font-weight: 700; cursor:pointer; color: var(--tinta); transition: all 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
+  .sambung-btn:hover { border-color: var(--primary); background: var(--biru-muda); }
+  .sambung-btn.benar { border-color: var(--hijau-tua); background:#ECFDF5; color: var(--hijau-tua); }
+  .sambung-btn.salah { border-color: var(--salah); background:#FEF2F2; color: var(--salah); }
+  /* ====== EFEK & MODAL ====== */
+  #efek-salah { position: absolute; inset: 0; z-index: 45; pointer-events: none; background: rgba(231, 76, 60, 0); transition: background 0.6s ease-out; }
+  #efek-salah.nyala { background: rgba(231, 76, 60, 0.4); transition: none; }
+  .confetti { position: absolute; width: 12px; height: 12px; z-index: 45; opacity: 1; pointer-events: none; animation: pop 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+  @keyframes pop { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0) rotate(720deg); opacity: 0; } }
+  .modal-bg { position: absolute; inset: 0; z-index: 50; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; }
+  .modal-bg.show { display: flex; }
+  .modal { width: 800px; max-width: 90%; max-height: 85%; overflow: auto; background: #FFFFFF; border-radius: 40px; padding: 40px; position: relative; box-shadow: 0 25px 50px rgba(0,0,0,0.4); border: 3px solid var(--primary); }
+  .modal h3 { margin: 0 0 16px; font-size: 32px; color: var(--primary-tua); font-weight: 900; }
+  .modal p, .modal li, .info-tabel td { font-size: 20px; line-height: 1.6; color: var(--tinta); }
+  .modal .tutup { position: absolute; top: 24px; right: 24px; width: 44px; height: 44px; border-radius: 50%; font-weight: bold; background: var(--krem-2); color: var(--salah); display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid var(--garis); font-size: 20px; }
+  .input-form { width: 100%; padding: 16px 20px; font-size: 22px; font-family: inherit; font-weight: 700; color: var(--tinta); border: 3px solid var(--garis); border-radius: 16px; margin-bottom: 16px; outline: none; transition: border 0.3s; background: #fff; }
+  .input-form:focus { border-color: var(--primary); background: var(--biru-muda); }
+  .info-tabel { width: 100%; border-collapse: collapse; margin-top: 10px; background: #fff; }
+  .info-tabel td { border: 2px solid var(--garis); padding: 12px 16px; }
+  .info-tabel td:first-child { font-weight: 800; background: var(--krem-2); width: 40%; color: var(--primary-tua); }
+  .akhir { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; }
+  .akhir h2 { font-size: 46px; color: var(--primary-tua); margin: 0; font-weight: 900; }
+  .akhir .skor-angka { font-size: 70px; font-weight: 900; color: var(--accent-tua); margin: 5px 0; text-shadow: 0 4px 10px rgba(240, 147, 43, 0.3); }
+  .akhir .identitas { font-size: 22px; font-weight: 700; background: #FFF9E6; padding: 10px 24px; border-radius: 99px; color: #856404; border: 2px solid #F1C40F; box-shadow: var(--bayang-kecil); }
+  #audio-widget {
+    position: absolute; top: 650px; left: 540px; z-index: 60; background: #FFFFFF; padding: 6px 16px; border-radius: 99px;
+    display: none; align-items: center; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); border: 2px solid var(--garis);
+  }
+  .icon-btn-small { width: 32px; height: 32px; border: none; border-radius: 50%; background: var(--krem-2); color: var(--primary); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  #volume-slider { -webkit-appearance: none; width: 100px; height: 6px; background: #DFE6E9; border-radius: 5px; outline: none; cursor: pointer; }
+  #volume-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--primary); cursor: pointer; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+
+  /* ====== TAMBAHAN: Descriptive Text (emoji sebagai ilustrasi) ====== */
+  .belajar-em { font-size: 170px; line-height: 1; filter: drop-shadow(0 12px 18px rgba(0,0,0,0.15)); }
+  .em-pair { width: 78px; height: 78px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 46px; background: #fff; border: 2px solid var(--garis); border-radius: 14px; }
+  .em-obj { font-size: 88px; line-height: 1.1; padding: 4px 0; }
+  .kumpul-flag { width: auto !important; max-width: 240px; }
+  .kumpul-chip { background: #fff; border: 3px solid var(--primary); color: var(--primary-tua); padding: 10px 16px; border-radius: 16px; font-size: 19px; font-weight: 800; line-height: 1.25; box-shadow: var(--bayang-kecil); }
+  .lab-sim-dot { max-width: none !important; }
+  .lab-teks { background: #fff; border: 3px solid #D8F3E4; border-radius: 22px; padding: 16px 24px; margin-bottom: 12px; font-size: 19px; line-height: 1.9; color: var(--tinta); flex-shrink: 0; }
+  .lab-teks-judul { text-align: center; font-weight: 900; font-size: 22px; color: var(--hijau-tua); margin-bottom: 6px; }
+  .lab-teks p { margin: 0; }
+  .lab-kal { transition: all .25s; border-radius: 6px; padding: 2px 0; }
+  .lab-kal.off { opacity: .35; }
+  .lab-teks u.lf { text-decoration: none; }
+  .lab-teks.lfmode u.lf { background: #FFE08A; border-radius: 6px; padding: 0 5px; font-weight: 900; color: #7A4F00; }
+</style>
+</head>
+<body>
+<div id="viewport">
+  <div id="stage">
+    
+    <div id="efek-salah"></div>
+    <section id="scr-judul" class="screen active">
+      <div class="bg"><img id="cfg-bgjudul" src="./asset/img/bg_judul.jpg" alt="" onerror="imgErr(this)"><div class="judul-topright-ornamen"></div></div>
+      <div class="judul-topright">
+        <button class="icon-btn" data-sfx onclick="openModal('modal-info')" title="Informasi">i</button>
+        <button class="icon-btn" data-sfx onclick="openModal('modal-dev')" title="Pengembang">★</button>
+      </div>
+      <div class="judul-center">
+        <h1 class="judul-utama" id="cfg-judul">Judul Materi</h1>
+        <p class="judul-sub" id="cfg-subjudul">Sub Judul Materi</p>
+        <button class="btn btn-kuning mulai-btn" data-sfx onclick="openModal('modal-login')">▶ MULAI</button>
+      </div>
+      <div class="pengampu-pojok" data-sfx onclick="openModal('modal-dev')" title="Profil Pengembang">
+        <span class="pengampu-label">Pengampu Mata Pelajaran Bahasa Inggris</span>
+        <span class="pengampu-nama" id="cfg-pengampu">Nama Guru, S.Pd</span>
+      </div>
+    </section>
+    <section id="scr-menu" class="screen">
+      <div class="bg"></div>
+      <div class="topbar batik-motif">
+        <div class="judul-bar"><span id="cfg-judul-menu">Judul Materi</span><small>Pilih kegiatan belajarmu</small></div>
+        <div class="spacer"></div>
+        <button class="icon-btn" data-sfx onclick="goJudul()" title="Beranda">⌂</button>
+      </div>
+      <div class="menu-head batik-motif">
+        <h2>Mau melakukan apa hari ini?</h2>
+        <p>Mulailah dari <b>Belajar</b>, lanjut ke <b>Bermain</b>, lalu uji dirimu di <b>Berlatih</b>.</p>
+      </div>
+      <div class="menu-cards">
+        <button class="menu-card mc-belajar" data-sfx onclick="startBelajar()">
+          <img src="./asset/img/menu_belajar.png" class="img-ikon" alt="Belajar" style="border-radius:50%; background:#fff; padding:10px;" onerror="imgErr(this)">
+          <div class="mc-judul">Belajar</div>
+          <div class="mc-sub">Materi Pembelajaran</div>
+        </button>
+        <button class="menu-card mc-bermain" data-sfx onclick="startBermain()">
+          <img src="./asset/img/menu_bermain.png" class="img-ikon" alt="Bermain" style="border-radius:50%; background:#fff; padding:10px;" onerror="imgErr(this)">
+          <div class="mc-judul">Bermain</div>
+          <div class="mc-sub">45 Permainan Interaktif</div>
+        </button>
+        <button class="menu-card mc-berlatih" data-sfx onclick="startBerlatih()">
+          <img src="./asset/img/menu_berlatih.png" class="img-ikon" alt="Berlatih" style="border-radius:50%; background:#fff; padding:10px;" onerror="imgErr(this)">
+          <div class="mc-judul">Berlatih</div>
+          <div class="mc-sub">45 Soal Evaluasi</div>
+        </button>
+        <button class="menu-card mc-labmaya" data-sfx onclick="startLabMaya()">
+          <img src="./asset/img/menu_labmaya.png" class="img-ikon" alt="Lab Maya" style="border-radius:50%; background:#fff; padding:10px;" onerror="imgErr(this)">
+          <div class="mc-judul">Lab Maya</div>
+          <div class="mc-sub">Eksperimen Bahasa Virtual</div>
+        </button>
+        <button class="menu-card mc-sertifikat terkunci" id="mc-sertifikat" data-sfx onclick="bukaSertifikatGabungan()">
+          <img src="./asset/img/menu_sertifikat.png" class="img-ikon" alt="Sertifikat" style="border-radius:50%; background:#fff; padding:10px;" onerror="imgErr(this)">
+          <div class="mc-judul">Sertifikat</div>
+          <div class="mc-sub" id="mc-sertifikat-sub">🔒 Selesaikan Bermain & Berlatih dulu</div>
+        </button>
+      </div>
+    </section>
+    <section id="scr-belajar" class="screen">
+      <div class="bg"></div>
+      <div class="topbar batik-motif">
+        <div class="judul-bar">Belajar<small id="belajar-sub">Materi</small></div>
+        <div class="spacer"></div>
+        <div class="progress-wrap"><span class="progress-label" id="belajar-plabel">1/4</span><div class="progress-track"><div class="progress-fill" id="belajar-pfill"></div></div></div>
+        <button class="icon-btn" data-sfx onclick="goMenu()" title="Menu">☰</button>
+      </div>
+      <div class="content" id="belajar-content"></div>
+      <div class="navbar batik-motif">
+        <button class="nav-btn nav-back" id="belajar-prev" data-sfx onclick="belajarPrev()">◀ Sebelumnya</button>
+        <button class="nav-btn nav-next" id="belajar-next" data-sfx onclick="belajarNext()">Selanjutnya ▶</button>
+      </div>
+    </section>
+    <section id="scr-bermain" class="screen">
+      <div class="bg"></div>
+      <div class="topbar batik-motif">
+        <div class="judul-bar">Bermain<small id="bermain-sub">Aktivitas Interaktif</small></div>
+        <div class="spacer"></div>
+        <div class="skor-badge">🏆 Skor: <span id="skor-bermain-angka">0</span></div>
+        <div class="progress-wrap" style="margin-left:10px"><span class="progress-label" id="bermain-plabel">1/45</span><div class="progress-track" style="width:120px"><div class="progress-fill" id="bermain-pfill"></div></div></div>
+        <button class="icon-btn" data-sfx onclick="goMenu()" title="Menu">☰</button>
+      </div>
+      <div class="content" id="bermain-content"></div>
+      <div class="navbar batik-motif">
+        <button class="nav-btn nav-back" data-sfx onclick="bermainPrev()">◀ Sebelumnya</button>
+        <button class="nav-btn nav-next" id="bermain-next" data-sfx onclick="bermainNext()" disabled>Selanjutnya ▶</button>
+      </div>
+    </section>
+    <section id="scr-berlatih" class="screen">
+      <div class="bg"></div>
+      <div class="topbar batik-motif">
+        <div class="judul-bar">Berlatih<small id="berlatih-sub">Uji Pemahaman</small></div>
+        <div class="spacer"></div>
+        <div class="progress-wrap"><span class="progress-label" id="berlatih-plabel">1/45</span><div class="progress-track" style="width:160px"><div class="progress-fill" id="berlatih-pfill"></div></div></div>
+        <button class="icon-btn" data-sfx onclick="goMenu()" title="Menu">☰</button>
+      </div>
+      <div class="content" id="berlatih-content"></div>
+      <div class="navbar batik-motif">
+        <button class="nav-btn nav-back" data-sfx onclick="berlatihPrev()">◀ Sebelumnya</button>
+        <button class="nav-btn nav-next" id="berlatih-next" data-sfx onclick="berlatihNext()" disabled>Selanjutnya ▶</button>
+      </div>
+    </section>
+    <section id="scr-labmaya" class="screen">
+      <div class="bg" style="background:linear-gradient(180deg,#F1FAEE,#EAFBF1);"></div>
+      <div class="topbar batik-motif">
+        <div class="judul-bar">Lab Maya<small id="labmaya-sub">Eksperimen Bahasa Virtual</small></div>
+        <div class="spacer"></div>
+        <div class="progress-wrap"><span class="progress-label" id="labmaya-plabel">1/2</span><div class="progress-track"><div class="progress-fill" id="labmaya-pfill" style="background:linear-gradient(90deg,var(--hijau),var(--hijau-tua));"></div></div></div>
+        <button class="icon-btn" data-sfx onclick="goMenu()" title="Menu">☰</button>
+      </div>
+      <div class="lab-nav-tabs" id="labmaya-tabs"></div>
+      <div class="content" id="labmaya-content"></div>
+      <div class="navbar batik-motif">
+        <button class="nav-btn nav-back" id="labmaya-prev" data-sfx onclick="labMayaPrev()">◀ Sebelumnya</button>
+        <button class="nav-btn nav-next" id="labmaya-next" data-sfx onclick="labMayaNext()">Selanjutnya ▶</button>
+      </div>
+    </section>
+    <div class="modal-bg" id="modal-login">
+      <div class="modal" style="width: 550px; text-align: center; padding: 50px;">
+        <button class="tutup" data-sfx onclick="closeModal('modal-login')">✕</button>
+        <h3>Selamat Datang!</h3>
+        <p style="margin-bottom:24px;">Silakan isi identitasmu sebelum mulai belajar.</p>
+        <input type="text" id="in-nama" class="input-form" placeholder="Nama Lengkap" required>
+        <input type="text" id="in-sekolah" class="input-form" placeholder="Asal Sekolah">
+        <div id="login-pesan" style="color:var(--salah); font-weight:bold; margin-bottom:16px; display:none;">⚠️ Nama belum diisi!</div>
+        <button class="btn btn-kuning" style="width:100%; height:64px; font-size:24px; margin-top:10px;" data-sfx onclick="simpanIdentitas()">Mulai Belajar</button>
+      </div>
+    </div>
+    <div class="modal-bg" id="modal-info">
+      <div class="modal">
+        <button class="tutup" data-sfx onclick="closeModal('modal-info')">✕</button>
+        <h3>Informasi Materi</h3>
+        <table class="info-tabel">
+          <tr><td>Fase / Kelas</td><td id="cfg-fase">Fase ... • Kelas ...</td></tr>
+          <tr><td>Mata Pelajaran</td><td id="cfg-mapel">Mata Pelajaran</td></tr>
+          <tr><td>Unit</td><td id="cfg-unit">Unit</td></tr>
+          <tr><td>Sub Unit</td><td id="cfg-subunit">Sub Unit</td></tr>
+          <tr><td>Tujuan Pembelajaran</td><td id="cfg-tp">Tujuan Pembelajaran (TP)</td></tr>
+        </table>
+      </div>
+    </div>
+    
+    <div class="modal-bg" id="modal-dev">
+      <div class="modal" style="width: 750px; padding: 40px;">
+        <button class="tutup" data-sfx onclick="closeModal('modal-dev')">✕</button>
+        <h3 style="text-align: center; margin-bottom: 24px;">Profil Pengembang</h3>
+        <div style="display: flex; gap: 30px; align-items: center; background: #F8FAFC; padding: 30px; border-radius: 32px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.02); border: 2px solid var(--garis);">
+          <div style="flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 14px;">
+            <div style="position: relative;">
+              <img id="cfg-foto" src="./asset/img/profil.png" alt="Foto Pengembang" style="width: 160px; height: 200px; border-radius: 16px; object-fit: cover; box-shadow: var(--bayang); background: var(--primary); border: 4px solid #fff;" onerror="imgErr(this)">
+              <div style="position: absolute; bottom: -8px; right: -8px; background: var(--hijau-tua); color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; border: 3px solid #fff; box-shadow: var(--bayang-kecil);" title="Terverifikasi">✓</div>
+            </div>
+            <div id="cfg-nama2" style="background: var(--accent); color: #fff; font-weight: 900; padding: 6px 18px; border-radius: 99px; font-size: 15px; box-shadow: var(--bayang-kecil);">Nama Pengembang</div>
+          </div>
+          <div style="flex: 1;">
+            <table class="info-tabel" style="margin-top: 0; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+              <tr><td style="width: 35%;">Nama</td><td id="cfg-nama" style="font-weight: 800; color: var(--primary-tua); font-size: 22px;">Nama Pengembang</td></tr>
+              <tr><td>Instansi</td><td id="cfg-instansi">Nama Instansi / Sekolah</td></tr>
+              <tr><td>Jenis</td><td id="cfg-jenis">Media Pembelajaran Interaktif (MPI)</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="audio-widget">
+      <button class="icon-btn-small" id="sound-toggle" data-sfx="no" onclick="toggleSound()" title="Suara">🔊</button>
+      <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1" oninput="changeVolume(this.value)">
+    </div>
+  </div>
+</div>
+<script>
+/* ##############################################################
+   #  BAGIAN A — KONFIGURASI (EDIT DI SINI SAJA)               #
+   ############################################################## */
+
+/* --- 1) IDENTITAS MATERI & PROFIL --- */
+const CONFIG = {
+  judul:    `Descriptive Text`,
+  subJudul: `Let's Describe People, Places, and Things in English`,
+  fase:     `Fase E • Kelas X`,
+  mapel:    `Bahasa Inggris`,
+  unit:     `Teks Deskriptif (Descriptive Text)`,
+  subUnit:  `Mendeskripsikan Orang, Tempat, dan Benda`,
+  tp:       `Peserta didik mampu mengidentifikasi tujuan, struktur teks, dan unsur kebahasaan descriptive text, serta menyusun teks deskriptif sederhana tentang orang, tempat, benda, atau hewan.`,
+  logo:     "./asset/img/logo.png",
+  bgJudul:  "./asset/img/bg_judul.jpg",
+  profil: {
+    nama:     `Nama Guru, S.Pd`,
+    instansi: `SMA N 2 Gerokgak`,
+    jenis:    `Media Pembelajaran Interaktif (MPI)`,
+    foto:     "./asset/img/profil.png"
+  }
+};
+
+/* --- 2) BELAJAR — ilustrasi kiri (emoji "em" atau gambar "img"), penjelasan kanan --- */
+const MATERI = [
+  { judul:`Belajar 1: What Is a Descriptive Text?`, em:`📖`,
+    intro:`Pernahkah kamu menceritakan hewan peliharaan, sahabat, atau tempat favoritmu sampai temanmu bisa membayangkannya? Itulah inti dari descriptive text. Yuk, kita kenali!`,
+    isi:`<p><b>Definition</b></p><p>A <b>descriptive text</b> is a text that describes a <b>particular</b> person, place, animal, or thing in detail, so the reader can "see" it in his or her mind.</p><p>Artinya: teks deskriptif menggambarkan <b>satu subjek tertentu</b> secara rinci, bukan hal yang bersifat umum.</p><p><b>Social Function</b></p><p>To <b>describe</b> a particular subject: what it looks like, what it is like, and what its characteristics are.</p><p><b>Bedanya dengan teks lain</b></p><ul><li><b>Descriptive</b>: subjek tertentu. 📌 <i>My Cat, Mochi</i></li><li><b>Report</b>: subjek secara umum. 📌 <i>Cats</i></li><li><b>Recount</b>: menceritakan peristiwa masa lalu. 📌 <i>My Holiday in Bali</i></li><li><b>Procedure</b>: langkah-langkah melakukan sesuatu. 📌 <i>How to Make Fried Rice</i></li></ul><p><b>Contoh subjek teks deskriptif</b></p><ul><li>Person: <i>My Best Friend, Ayu</i></li><li>Place: <i>Tanah Lot Temple</i></li><li>Animal: <i>The Komodo Dragon</i></li><li>Thing: <i>My Old Bicycle</i></li></ul>`,
+    kuis:{ tanya:`Teks yang menggambarkan "My Cat, Mochi" secara rinci, mulai dari bulu hingga kebiasaannya, termasuk jenis teks...`, o:[`Procedure text`,`Descriptive text`], j:1 } },
+  { judul:`Belajar 2: Generic Structure of Descriptive Text`, em:`🧩`,
+    intro:`Setiap teks punya kerangka. Descriptive text pun begitu, hanya saja kerangkanya sederhana. Mari bedah bagian-bagiannya!`,
+    isi:`<p>A descriptive text usually has two main parts:</p><ul><li><b>1. Identification</b>: introduces the subject (<i>who / what / where</i>). 📌 <i>Tanah Lot Temple is a famous sea temple in Tabanan, Bali.</i></li><li><b>2. Description</b>: gives the details of the subject: parts, qualities, and characteristics. Bisa terdiri dari beberapa paragraf. 📌 <i>The temple looks beautiful at sunset. The waves are strong.</i></li></ul><p><b>Title (judul)</b> ditulis di atas teks untuk menyebut subjeknya, misalnya <i>"Tanah Lot Temple"</i>. Beberapa teks juga ditutup dengan kesan pribadi penulis (<i>closing</i>), tetapi bagian ini bersifat opsional.</p><p><b>Isi bagian Description tergantung subjeknya:</b></p><ul><li><b>Person</b>: physical appearance, personality, habits.</li><li><b>Place</b>: location, appearance, atmosphere, activities.</li><li><b>Thing / Animal</b>: shape, size, colour, parts, function, habitat.</li></ul><p>⚡ <b>Singkatnya:</b> Title → Identification (kenalkan) → Description (rinci).</p>`,
+    kuis:{ tanya:`Bagian descriptive text yang memperkenalkan subjek (siapa/apa/di mana) disebut...`, o:[`Identification`,`Description`], j:0 } },
+  { judul:`Belajar 3: Language Features — Simple Present Tense`, em:`⏰`,
+    intro:`Unsur kebahasaan yang paling menonjol dalam descriptive text adalah simple present tense. Kenapa? Karena kita menggambarkan fakta dan ciri-ciri yang berlaku umum.`,
+    isi:`<p><b>Simple Present Tense</b> dipakai untuk menyatakan fakta dan keadaan yang tetap.</p><p><b>1) Verb "be": am, is, are</b></p><ul><li>I <b>am</b> tall. &nbsp; She/He/It <b>is</b> friendly. &nbsp; They/We/You <b>are</b> kind.</li><li>📌 <i>The room is clean. The students are diligent.</i></li></ul><p><b>2) Verb "have / has"</b> (menunjukkan kepemilikan atau bagian)</p><ul><li>I/You/We/They <b>have</b>, but She/He/It <b>has</b>.</li><li>📌 <i>She has long hair. They have a big garden.</i></li></ul><p><b>3) Linking verbs</b>: look, seem, feel, smell, taste, sound, become</p><ul><li>📌 <i>The soup tastes delicious. He looks tired.</i></li></ul><p><b>4) Action verbs</b> (tambahkan <b>-s/-es</b> untuk he, she, it)</p><ul><li>📌 <i>My cat sleeps all day. The sun rises in the east.</i></li></ul><p>⚠️ Bila subjek sudah tidak ada atau sudah berlalu (misalnya kakek yang telah meninggal), gunakan <b>simple past</b>: <i>My grandfather was a farmer.</i></p>`,
+    kuis:{ tanya:`Kalimat yang benar: "My sister ... long black hair."`, o:[`have`,`has`], j:1 } },
+  { judul:`Belajar 4: Adjectives and Noun Phrases`, em:`🎨`,
+    intro:`Rahasia deskripsi yang hidup ada pada adjective. Tapi hati-hati, urutannya tidak boleh sembarangan!`,
+    isi:`<p><b>Adjective</b> is a word that describes a noun. 📌 <i>a <b>beautiful</b> garden, a <b>tall</b> boy</i></p><p><b>Noun Phrase</b> = determiner + adjective(s) + noun. 📌 <i>a lovely small house; two old wooden chairs</i></p><p><b>Order of Adjectives (urutan adjective)</b></p><ul><li><b>Opinion</b> → <b>Size</b> → <b>Age</b> → <b>Shape</b> → <b>Colour</b> → <b>Origin</b> → <b>Material</b> → NOUN</li><li>📌 <i>a <b>lovely small old round brown wooden</b> table</i></li><li>📌 <i>a <b>big red</b> car</i> (bukan <i>a red big car</i>)</li></ul><p><b>Contoh tiap jenis adjective</b></p><ul><li>Opinion: beautiful, lovely, delicious, ugly</li><li>Size: big, small, tall, tiny</li><li>Shape: round, square, long</li><li>Colour: red, brown, white</li><li>Material: wooden, plastic, metal, glass</li></ul><p>💡 Dalam bahasa Inggris, adjective berada <b>sebelum</b> noun dan tidak berubah bentuk untuk jamak: <i>two beautiful houses</i> (bukan <i>beautifuls</i>).</p>`,
+    kuis:{ tanya:`Urutan adjective yang benar adalah...`, o:[`a wooden red big box`,`a big red wooden box`], j:1 } },
+  { judul:`Belajar 5: Describing People`, em:`🧑‍🤝‍🧑`,
+    intro:`Menggambarkan orang tidak hanya soal wajah dan tinggi badan, tapi juga sifat dan kebiasaannya. Mari kita lengkapi kosakatanya!`,
+    isi:`<p>Ketika mendeskripsikan <b>person</b>, kita bisa menjelaskan:</p><ul><li><b>Physical appearance</b>: height, body, hair, eyes, skin, clothes. 📌 <i>She is tall and slim. She has long wavy hair and brown eyes.</i></li><li><b>Personality</b>: sifat atau karakter. 📌 <i>He is honest, diligent, and helpful.</i></li><li><b>Habits / activities</b>: kebiasaan. 📌 <i>Every morning, she jogs around the village.</i></li></ul><p><b>Vocabulary</b></p><ul><li>Body: tall, short, slim, chubby, muscular</li><li>Hair: straight, curly, wavy, short, long, black</li><li>Personality: friendly, kind, diligent, shy, generous, humorous</li></ul><p><b>Pola kalimat</b></p><ul><li>She/He <b>is</b> + adjective. 📌 <i>He is friendly.</i></li><li>She/He <b>has</b> + noun phrase. 📌 <i>She has a round face.</i></li></ul><p>📌 <b>Contoh singkat:</b> <i>Ayu is my best friend at school. She is tall and slim, with long wavy hair. In addition, she is friendly and very diligent.</i></p>`,
+    kuis:{ tanya:`Kata "generous" dan "diligent" menggambarkan ... seseorang.`, o:[`physical appearance`,`personality`], j:1 } },
+  { judul:`Belajar 6: Describing Places`, em:`🏝️`,
+    intro:`Dari pantai di Bali sampai kantin sekolah: bagaimana cara membuat pembaca seolah-olah berada di tempat itu?`,
+    isi:`<p>Ketika mendeskripsikan <b>place</b>, kita bisa menjelaskan:</p><ul><li><b>Location</b>: di mana tempat itu berada. 📌 <i>Lovina is a quiet beach in Singaraja, North Bali.</i></li><li><b>Appearance</b>: bentuk, ukuran, warna. 📌 <i>The sand is black and the water is clear.</i></li><li><b>Atmosphere</b>: suasana. 📌 <i>It is calm and peaceful in the morning.</i></li><li><b>Activities</b>: hal yang bisa dilihat/dilakukan. 📌 <i>Tourists can watch dolphins.</i></li></ul><p><b>Prepositions of place</b></p><ul><li>in, on, at, near, next to, beside, between, behind, in front of, opposite</li><li>📌 <i>The canteen is between the library and the gym.</i></li></ul><p><b>There is / There are</b></p><ul><li><b>There is</b> + benda tunggal. 📌 <i>There is a big tree in the yard.</i></li><li><b>There are</b> + benda jamak. 📌 <i>There are six tables in the room.</i></li></ul><p><b>Five senses</b>: gunakan sight, sound, smell, taste, dan touch. 📌 <i>The air smells fresh. The waves sound soft.</i></p>`,
+    kuis:{ tanya:`Untuk menyatakan banyak meja berada di dalam ruangan, kita memakai...`, o:[`There is`,`There are`], j:1 } },
+  { judul:`Belajar 7: Describing Things and Animals`, em:`🐱`,
+    intro:`Benda dan hewan pun bisa dideskripsikan dengan menarik. Kuncinya: perhatikan bentuk, bagian, dan fungsinya.`,
+    isi:`<p>Untuk <b>things</b> (benda), jelaskan:</p><ul><li><b>Shape, size, colour</b>: <i>The bag is round, small, and red.</i></li><li><b>Material</b>: <i>It is made of leather.</i></li><li><b>Parts</b>: <i>It has two zippers and a long strap.</i></li><li><b>Function</b>: <i>It is used to carry books.</i></li></ul><p>Untuk <b>animals</b> (hewan), jelaskan:</p><ul><li><b>Appearance</b>: <i>A Komodo dragon has a long tail, strong legs, and sharp claws.</i></li><li><b>Habitat</b> (tempat hidup): <i>It lives on Komodo Island and nearby islands.</i></li><li><b>Food and behaviour</b>: <i>It eats deer, and it can swim.</i></li></ul><p><b>Useful patterns</b></p><ul><li>It <b>is</b> + adjective. &nbsp; It <b>has</b> + parts.</li><li>It <b>is made of</b> + material. &nbsp; It <b>is used to</b> + verb.</li><li>It <b>lives in</b> + place. &nbsp; It <b>eats</b> + food.</li></ul><p>📌 <b>Contoh:</b> <i>My cat, Mochi, is small and has soft white fur. Her eyes are big and green. She usually sleeps on my bed.</i></p>`,
+    kuis:{ tanya:`Kalimat "It is used to cut paper" menjelaskan ... sebuah benda.`, o:[`colour`,`function`], j:1 } },
+  { judul:`Belajar 8: Making Descriptions Vivid`, em:`✨`,
+    intro:`Deskripsi yang baik membuat pembaca bisa melihat, mendengar, bahkan mencium apa yang kita tulis. Ini triknya!`,
+    isi:`<p><b>1) Specific nouns</b>: pilih kata yang lebih spesifik. 📌 <i>a golden retriever</i> lebih jelas daripada <i>a dog</i>.</p><p><b>2) Degrees of comparison</b></p><ul><li>Positive: <i>This hill is high.</i></li><li>Comparative: <i>That hill is <b>higher than</b> this hill. / She is <b>more beautiful than</b> her sister.</i></li><li>Superlative: <i>Mount Agung is <b>the highest</b> mountain in Bali. / It is <b>the most beautiful</b> beach.</i></li></ul><p><b>3) Figurative language</b></p><ul><li><b>Simile</b>: membandingkan memakai <b>like</b> atau <b>as ... as</b>. 📌 <i>Her voice is as sweet as honey.</i></li><li><b>Metaphor</b>: membandingkan langsung, tanpa like/as. 📌 <i>The classroom is a zoo.</i></li></ul><p><b>4) Sensory details (five senses)</b></p><ul><li>Sight: <i>bright, colourful</i> &nbsp; Sound: <i>noisy, quiet</i></li><li>Smell: <i>fragrant, fresh</i> &nbsp; Taste: <i>sweet, spicy</i> &nbsp; Touch: <i>soft, rough</i></li></ul>`,
+    kuis:{ tanya:`"Her voice is as sweet as honey" mengandung gaya bahasa...`, o:[`simile`,`metaphor`], j:0 } },
+  { judul:`Belajar 9: Writing Your Own Descriptive Text`, em:`✍️`,
+    intro:`Saatnya menulis! Ikuti langkah berikut dan hindari kesalahan umum agar deskripsimu rapi dan benar.`,
+    isi:`<p><b>Steps in Writing</b></p><ul><li><b>1. Choose</b> a particular subject (e.g., <i>My Grandmother's Kitchen</i>).</li><li><b>2. Brainstorm</b>: kumpulkan ide dan detail (mind map, pancaindra).</li><li><b>3. Draft</b>: tulis Identification, lalu Description.</li><li><b>4. Organize</b> details secara logis: dari kepala ke kaki, dekat ke jauh, atau penting ke kurang penting.</li><li><b>5. Revise</b>: periksa grammar, spelling, dan pilihan kata.</li></ul><p><b>Common Mistakes</b></p><ul><li>❌ <i>She have long hair.</i> → ✅ <i>She has long hair.</i></li><li>❌ <i>The beach very beautiful.</i> → ✅ <i>The beach is very beautiful.</i></li><li>❌ <i>There is many boats.</i> → ✅ <i>There are many boats.</i></li><li>❌ <i>He look tired.</i> → ✅ <i>He looks tired.</i></li></ul><p><b>Checklist</b>: ada Title? Ada Identification dan Description? Memakai simple present? Adjective sudah berurutan? Deskripsinya spesifik dan hidup?</p>`,
+    kuis:{ tanya:`Kalimat "She have long hair" perlu diperbaiki menjadi...`, o:[`She having long hair`,`She has long hair`], j:1 } }
+];
+
+/* --- 3) BERMAIN — 45 permainan (9 topik x 5 ragam) ---
+   Gambar diganti emoji ("em"). Game 'kumpul' memakai teks pendek (benar[] & salah[]). */
+const dataBermain = [
+  /* ===== Topik 1: Pengertian & fungsi sosial ===== */
+  { t:'jodoh', sub:'Menjodohkan', ins:`Jodohkan istilah dengan artinya!`,
+    pairs:[{n:1,teks:`Descriptive text`},{n:2,teks:`Social function`},{n:3,teks:`Particular subject`}],
+    imgs:[{n:1,em:`📝`,name:`Text that describes a subject in detail`},{n:2,em:`🎯`,name:`To describe how a subject looks and what it is like`},{n:3,em:`🐱`,name:`One specific subject, e.g. My Cat Mochi`}] },
+  { t:'klik', sub:'Memilih Kartu', ins:`Pilih kartu yang merupakan DESCRIPTIVE TEXT!`,
+    opsi:[
+      {em:`🐱`, t:`Mochi is my cat. She has soft white fur and big green eyes.`, b:true, msg:`Benar. Teks ini menggambarkan satu subjek tertentu secara rinci.`},
+      {em:`🍳`, t:`First, heat the pan. Then add two eggs.`, b:false, msg:`Bukan ini, ini procedure text (langkah-langkah).`},
+      {em:`📅`, t:`Last Sunday, I visited my grandmother in Singaraja.`, b:false, msg:`Bukan ini, ini recount text (peristiwa masa lalu).`},
+      {em:`🐈`, t:`Cats are mammals. They usually have four legs and fur.`, b:false, msg:`Bukan ini, ini report text karena membahas kucing secara umum.`}
+    ] },
+  { t:'urut', sub:'Mengurutkan', ins:`Urutkan kalimat berikut menjadi deskripsi singkat yang runtut!`,
+    urut:[`I have a pet cat named Mochi.`,`She is a small cat with soft white fur.`,`In addition, her eyes are big and green.`,`Every night, she sleeps on my bed.`] },
+  { t:'kumpul', sub:'Kumpulkan yang Benar', ins:`Ketuk hanya kalimat yang cocok untuk DESCRIPTIVE TEXT! Hindari yang bukan.`,
+    benar:[`She has long hair`,`The room is big and clean`,`It has a soft tail`,`He is tall and friendly`],
+    salah:[`Mix the flour and eggs`,`Yesterday I went to Kuta`,`Click the Start button`,`First, boil the water`] },
+  { t:'sambung', sub:'Sambung Pengertian Descriptive Text', ins:`Pilih lanjutan yang benar!`,
+    hasil:`A descriptive text describes a particular person, place, or thing in detail. Its social function is to describe the subject so the reader can imagine it.`,
+    steps:[
+      { prev:`A text that describes a particular person, place, or thing in detail is called a ... text.`, benar:`descriptive`, salah:[`procedure`,`recount`] },
+      { prev:`The social function of a descriptive text is to ... a subject.`, benar:`describe`, salah:[`instruct`,`persuade`] },
+      { prev:`A descriptive text talks about a ... subject, such as "My Cat Mochi".`, benar:`specific`, salah:[`general`,`imaginary`] }
+    ] },
+
+  /* ===== Topik 2: Generic structure ===== */
+  { t:'jodoh', sub:'Menjodohkan', ins:`Jodohkan bagian teks dengan fungsinya!`,
+    pairs:[{n:1,teks:`Title`},{n:2,teks:`Identification`},{n:3,teks:`Description`}],
+    imgs:[{n:1,em:`🔤`,name:`Names the subject at the top of the text`},{n:2,em:`🏷️`,name:`Introduces the subject: who, what, or where`},{n:3,em:`🔍`,name:`Gives details: parts, qualities, characteristics`}] },
+  { t:'klik', sub:'Memilih Kartu', ins:`Pilih kalimat yang termasuk IDENTIFICATION!`,
+    opsi:[
+      {em:`🏝️`, t:`Lovina is a quiet beach in Singaraja, North Bali.`, b:true, msg:`Benar. Kalimat ini memperkenalkan subjek (apa dan di mana).`},
+      {em:`🌊`, t:`The water is calm and clear.`, b:false, msg:`Bukan ini, ini kalimat Description (detail subjek).`},
+      {em:`🐬`, t:`In the morning, tourists can see dolphins.`, b:false, msg:`Bukan ini, ini kalimat Description (aktivitas).`},
+      {em:`🌅`, t:`The sunset there looks amazing.`, b:false, msg:`Bukan ini, ini kalimat Description (penampilan).`}
+    ] },
+  { t:'urut', sub:'Mengurutkan', ins:`Urutkan bagian teks deskriptif dari atas ke bawah!`,
+    urut:[`Title: names the subject`,`Identification: tells who, what, or where the subject is`,`Description: gives details about the subject`,`Closing: personal impression (optional)`] },
+  { t:'kumpul', sub:'Kumpulkan yang Benar', ins:`Ketuk hanya kalimat IDENTIFICATION! Hindari kalimat Description.`,
+    benar:[`Bali is an island in Indonesia`,`Rina is my classmate`,`Komodo is a giant lizard`,`Borobudur is a Buddhist temple`],
+    salah:[`It has thick black hair`,`The beach is very quiet`,`She wears glasses every day`,`Its walls have many reliefs`] },
+  { t:'sambung', sub:'Sambung Generic Structure', ins:`Pilih lanjutan yang benar!`,
+    hasil:`The generic structure of a descriptive text consists of identification, which introduces the subject, and description, which explains the details.`,
+    steps:[
+      { prev:`The first part of a descriptive text, which introduces the subject, is the ...`, benar:`Identification`, salah:[`Description`,`Orientation`] },
+      { prev:`The part that explains the details of the subject is the ...`, benar:`Description`, salah:[`Identification`,`Evaluation`] },
+      { prev:`The sentence "Mochi is my pet cat." belongs to the ...`, benar:`Identification`, salah:[`Description`,`Closing`] }
+    ] },
+
+  /* ===== Topik 3: Simple present & linking verbs ===== */
+  { t:'jodoh', sub:'Menjodohkan', ins:`Jodohkan subjek dengan verb yang tepat!`,
+    pairs:[{n:1,teks:`She / He / It + have`},{n:2,teks:`I + be`},{n:3,teks:`They + be`}],
+    imgs:[{n:1,em:`👩`,name:`has (She has long hair.)`},{n:2,em:`🙋`,name:`am (I am tall.)`},{n:3,em:`👥`,name:`are (They are friendly.)`}] },
+  { t:'klik', sub:'Memilih Kartu', ins:`Pilih kalimat yang menggunakan SIMPLE PRESENT dengan benar!`,
+    opsi:[
+      {em:`👧`, t:`She have curly hair.`, b:false, msg:`Bukan ini, setelah she seharusnya has.`},
+      {em:`👩‍🦱`, t:`My sister has curly hair.`, b:true, msg:`Benar. Subjek tunggal (my sister) memakai has.`},
+      {em:`🏠`, t:`The room are very clean.`, b:false, msg:`Bukan ini, the room tunggal sehingga memakai is.`},
+      {em:`🐈`, t:`My cat sleep all day.`, b:false, msg:`Bukan ini, subjek tunggal memakai sleeps.`}
+    ] },
+  { t:'urut', sub:'Mengurutkan', ins:`Urutkan langkah memilih bentuk verb yang benar dalam simple present!`,
+    urut:[`Identify the subject of the sentence`,`Decide whether it is I, you, we, they, or he, she, it`,`Choose the verb: be, have, or an action verb`,`Add -s or -es if the subject is he, she, or it`] },
+  { t:'kumpul', sub:'Kumpulkan yang Benar', ins:`Ketuk hanya kalimat Simple Present yang BENAR! Hindari yang salah.`,
+    benar:[`She has black hair`,`It is very big`,`He looks happy`,`They are friendly`],
+    salah:[`She have black hair`,`It are very big`,`He look happy`,`They is friendly`] },
+  { t:'sambung', sub:'Sambung Simple Present', ins:`Pilih lanjutan yang benar!`,
+    hasil:`In a descriptive text we use simple present tense: is, am, are for states, has and have for possession, and linking verbs such as look, smell, and taste.`,
+    steps:[
+      { prev:`Dewi ... long straight hair.`, benar:`has`, salah:[`have`,`having`] },
+      { prev:`My parents ... very kind.`, benar:`are`, salah:[`is`,`am`] },
+      { prev:`This fried rice ... delicious. (use a linking verb)`, benar:`tastes`, salah:[`taste`,`tasted`] }
+    ] },
+
+  /* ===== Topik 4: Adjectives & noun phrases ===== */
+  { t:'jodoh', sub:'Menjodohkan', ins:`Jodohkan jenis adjective dengan contohnya!`,
+    pairs:[{n:1,teks:`Opinion adjective`},{n:2,teks:`Size adjective`},{n:3,teks:`Colour adjective`}],
+    imgs:[{n:1,em:`😍`,name:`beautiful, lovely, delicious`},{n:2,em:`📏`,name:`big, tiny, tall`},{n:3,em:`🎨`,name:`red, brown, white`}] },
+  { t:'klik', sub:'Memilih Kartu', ins:`Pilih noun phrase dengan URUTAN ADJECTIVE yang benar!`,
+    opsi:[
+      {em:`🪵`, t:`a wooden brown old chair`, b:false, msg:`Bukan ini. Urutan yang benar: an old brown wooden chair.`},
+      {em:`🪑`, t:`a lovely small round table`, b:true, msg:`Benar. Opinion → size → shape → noun.`},
+      {em:`🚗`, t:`a red big beautiful car`, b:false, msg:`Bukan ini. Urutan yang benar: a beautiful big red car.`},
+      {em:`🔵`, t:`a round small lovely table`, b:false, msg:`Bukan ini. Urutan yang benar: a lovely small round table.`}
+    ] },
+  { t:'urut', sub:'Mengurutkan', ins:`Urutkan jenis adjective sesuai urutan yang benar sebelum noun!`,
+    urut:[`Opinion (lovely)`,`Size (small)`,`Colour (blue)`,`Material (wooden)`] },
+  { t:'kumpul', sub:'Kumpulkan yang Benar', ins:`Ketuk hanya kata yang merupakan ADJECTIVE! Hindari yang bukan.`,
+    benar:[`beautiful`,`tall`,`friendly`,`delicious`],
+    salah:[`quickly`,`run`,`table`,`under`] },
+  { t:'sambung', sub:'Sambung Adjective & Noun Phrase', ins:`Pilih lanjutan yang benar!`,
+    hasil:`Adjectives describe nouns. In a noun phrase, adjectives are placed before the noun in order: opinion, size, age, shape, colour, origin, material.`,
+    steps:[
+      { prev:`A word that describes a noun is called an ...`, benar:`adjective`, salah:[`adverb`,`verb`] },
+      { prev:`In "a big brown dog", the word "big" shows ...`, benar:`size`, salah:[`colour`,`opinion`] },
+      { prev:`A group of words with a noun as its head, like "a tall young man", is a ...`, benar:`noun phrase`, salah:[`verb phrase`,`clause`] }
+    ] },
+
+  /* ===== Topik 5: Describing people ===== */
+  { t:'jodoh', sub:'Menjodohkan', ins:`Jodohkan aspek deskripsi orang dengan contohnya!`,
+    pairs:[{n:1,teks:`Physical appearance`},{n:2,teks:`Personality`},{n:3,teks:`Habit`}],
+    imgs:[{n:1,em:`🧍`,name:`tall, slim, wavy hair`},{n:2,em:`😊`,name:`kind, diligent, honest`},{n:3,em:`🏃`,name:`jogs every morning`}] },
+  { t:'klik', sub:'Memilih Kartu', ins:`Pilih kalimat yang menggambarkan PERSONALITY!`,
+    opsi:[
+      {em:`💇`, t:`Putu has short straight hair.`, b:false, msg:`Bukan ini, ini physical appearance.`},
+      {em:`📏`, t:`Putu is tall and slim.`, b:false, msg:`Bukan ini, ini physical appearance.`},
+      {em:`👓`, t:`Putu wears round glasses.`, b:false, msg:`Bukan ini, ini physical appearance.`},
+      {em:`🤝`, t:`Putu is very helpful and friendly.`, b:true, msg:`Benar. Helpful dan friendly menggambarkan sifat (personality).`}
+    ] },
+  { t:'urut', sub:'Mengurutkan', ins:`Susun kalimat menjadi teks deskriptif tentang seseorang!`,
+    urut:[`Ayu is my best friend at school.`,`She is tall and slim, with long wavy hair.`,`In addition, she is friendly and very diligent.`,`Every morning, she studies in the library before class.`] },
+  { t:'kumpul', sub:'Kumpulkan yang Benar', ins:`Ketuk hanya kalimat PHYSICAL APPEARANCE! Hindari personality dan habit.`,
+    benar:[`She has curly hair`,`He is tall and thin`,`She has brown eyes`,`He wears glasses`],
+    salah:[`She is very kind`,`He is hard-working`,`She is honest`,`He loves reading`] },
+  { t:'sambung', sub:'Sambung Describing People', ins:`Pilih lanjutan yang benar!`,
+    hasil:`When we describe a person, we can talk about physical appearance, personality, and habits using be and have/has.`,
+    steps:[
+      { prev:`Describing someone's height, hair, and eyes means describing his or her ...`, benar:`physical appearance`, salah:[`personality`,`habit`] },
+      { prev:`Words like "kind", "shy", and "diligent" describe a person's ...`, benar:`personality`, salah:[`physical appearance`,`hobby`] },
+      { prev:`She ... brown eyes and a round face.`, benar:`has`, salah:[`is`,`are`] }
+    ] },
+
+  /* ===== Topik 6: Describing places ===== */
+  { t:'jodoh', sub:'Menjodohkan', ins:`Jodohkan indra (sense) dengan contoh kata sifatnya!`,
+    pairs:[{n:1,teks:`Sight`},{n:2,teks:`Sound`},{n:3,teks:`Smell`}],
+    imgs:[{n:1,em:`👀`,name:`bright, colourful, crowded`},{n:2,em:`🔊`,name:`noisy, quiet, loud`},{n:3,em:`👃`,name:`fragrant, fresh, smoky`}] },
+  { t:'klik', sub:'Memilih Kartu', ins:`Pilih kalimat yang menyebutkan LOKASI tempat!`,
+    opsi:[
+      {em:`🧑‍🤝‍🧑`, t:`The market is always crowded.`, b:false, msg:`Bukan ini, ini suasana (atmosphere).`},
+      {em:`🎨`, t:`The walls are painted white.`, b:false, msg:`Bukan ini, ini penampilan (appearance).`},
+      {em:`📍`, t:`The school is next to a small river.`, b:true, msg:`Benar. Next to menyebutkan lokasi.`},
+      {em:`🎶`, t:`You can hear birds singing.`, b:false, msg:`Bukan ini, ini detail suara (sound).`}
+    ] },
+  { t:'urut', sub:'Mengurutkan', ins:`Susun kalimat menjadi teks deskriptif tentang sebuah tempat!`,
+    urut:[`Our school canteen is a busy place behind the main building.`,`Inside, it has ten wooden tables and a long food counter.`,`However, at break time it is noisy because many students come to eat.`,`Finally, the fried rice and the iced tea are my favourites.`] },
+  { t:'kumpul', sub:'Kumpulkan yang Benar', ins:`Ketuk hanya PREPOSITION OF PLACE! Hindari yang bukan.`,
+    benar:[`next to`,`in front of`,`between`,`behind`],
+    salah:[`quickly`,`beautiful`,`because`,`and`] },
+  { t:'sambung', sub:'Sambung Describing Places', ins:`Pilih lanjutan yang benar!`,
+    hasil:`To describe a place, we explain its location, appearance, and atmosphere using prepositions of place and there is / there are.`,
+    steps:[
+      { prev:`There ... a big tree in front of the school.`, benar:`is`, salah:[`are`,`am`] },
+      { prev:`There ... many small shops near the beach.`, benar:`are`, salah:[`is`,`am`] },
+      { prev:`The word "beside" in "The bank is beside the post office" is a preposition of ...`, benar:`place`, salah:[`time`,`manner`] }
+    ] },
+
+  /* ===== Topik 7: Describing things & animals ===== */
+  { t:'jodoh', sub:'Menjodohkan', ins:`Jodohkan aspek deskripsi benda dengan contohnya!`,
+    pairs:[{n:1,teks:`Shape`},{n:2,teks:`Material`},{n:3,teks:`Function`}],
+    imgs:[{n:1,em:`⚪`,name:`round, square, rectangular`},{n:2,em:`🪵`,name:`wooden, plastic, metal`},{n:3,em:`🔧`,name:`used to write, cut, or cook`}] },
+  { t:'klik', sub:'Memilih Kartu', ins:`Pilih kalimat yang menyebutkan FUNGSI benda!`,
+    opsi:[
+      {em:`🔴`, t:`The pencil is red and thin.`, b:false, msg:`Bukan ini, ini warna dan bentuk.`},
+      {em:`🪵`, t:`It is made of wood.`, b:false, msg:`Bukan ini, ini bahan (material).`},
+      {em:`📏`, t:`It is about eighteen centimetres long.`, b:false, msg:`Bukan ini, ini ukuran (size).`},
+      {em:`✏️`, t:`A pencil is used to write and draw.`, b:true, msg:`Benar. "is used to" menjelaskan fungsi.`}
+    ] },
+  { t:'urut', sub:'Mengurutkan', ins:`Susun kalimat menjadi teks deskriptif tentang seekor hewan!`,
+    urut:[`The Komodo dragon is the biggest lizard in the world.`,`It has a long tail, strong legs, and sharp claws.`,`Besides, its skin is rough and grey or brown.`,`Finally, it lives on Komodo Island and a few nearby islands.`] },
+  { t:'kumpul', sub:'Kumpulkan yang Benar', ins:`Ketuk hanya kata yang menunjukkan MATERIAL (bahan)!`,
+    benar:[`wooden`,`plastic`,`metal`,`glass`],
+    salah:[`round`,`small`,`heavy`,`red`] },
+  { t:'sambung', sub:'Sambung Describing Things', ins:`Pilih lanjutan yang benar!`,
+    hasil:`To describe a thing or an animal, we explain its shape, size, colour, material, parts, function, and habitat.`,
+    steps:[
+      { prev:`A table made of wood is a ... table.`, benar:`wooden`, salah:[`wood`,`woody`] },
+      { prev:`A knife ... to cut vegetables.`, benar:`is used`, salah:[`uses`,`are used`] },
+      { prev:`The place where an animal naturally lives is called its ...`, benar:`habitat`, salah:[`habit`,`hobby`] }
+    ] },
+
+  /* ===== Topik 8: Vivid descriptions ===== */
+  { t:'jodoh', sub:'Menjodohkan', ins:`Jodohkan istilah dengan contohnya!`,
+    pairs:[{n:1,teks:`Simile`},{n:2,teks:`Metaphor`},{n:3,teks:`Comparative`}],
+    imgs:[{n:1,em:`🌞`,name:`Her smile is like sunshine.`},{n:2,em:`🐒`,name:`The classroom is a zoo.`},{n:3,em:`🎒`,name:`My bag is heavier than yours.`}] },
+  { t:'klik', sub:'Memilih Kartu', ins:`Pilih kalimat yang berisi SIMILE!`,
+    opsi:[
+      {em:`🌹`, t:`She is beautiful.`, b:false, msg:`Bukan ini, tidak ada perbandingan dengan like atau as ... as.`},
+      {em:`🏠`, t:`The house is big and old.`, b:false, msg:`Bukan ini, hanya memakai adjective biasa.`},
+      {em:`🦁`, t:`My father is a lion at home.`, b:false, msg:`Bukan ini, ini metaphor (tanpa like atau as).`},
+      {em:`🐢`, t:`He is as slow as a turtle.`, b:true, msg:`Benar. Pola as ... as adalah simile.`}
+    ] },
+  { t:'urut', sub:'Mengurutkan', ins:`Urutkan kalimat dari positive, comparative, sampai superlative!`,
+    urut:[`This hill is high.`,`That hill is higher than this hill.`,`Mount Agung is the highest mountain in Bali.`] },
+  { t:'kumpul', sub:'Kumpulkan yang Benar', ins:`Ketuk hanya bentuk COMPARATIVE atau SUPERLATIVE! Hindari bentuk dasar.`,
+    benar:[`taller`,`more beautiful`,`the biggest`,`the most expensive`],
+    salah:[`tall`,`beautiful`,`big`,`expensive`] },
+  { t:'sambung', sub:'Sambung Vivid Description', ins:`Pilih lanjutan yang benar!`,
+    hasil:`A vivid description uses specific nouns, comparison, figurative language such as simile and metaphor, and the five senses.`,
+    steps:[
+      { prev:`"as brave as a lion" is an example of a ...`, benar:`simile`, salah:[`metaphor`,`comparative`] },
+      { prev:`The five senses are sight, hearing, smell, taste, and ...`, benar:`touch`, salah:[`speech`,`balance`] },
+      { prev:`Instead of "a dog", a more specific noun is "a ..."`, benar:`golden retriever`, salah:[`animal`,`thing`] }
+    ] },
+
+  /* ===== Topik 9: Writing steps & common mistakes ===== */
+  { t:'jodoh', sub:'Menjodohkan', ins:`Jodohkan langkah menulis dengan kegiatannya!`,
+    pairs:[{n:1,teks:`Brainstorm`},{n:2,teks:`Draft`},{n:3,teks:`Revise`}],
+    imgs:[{n:1,em:`💡`,name:`List ideas and details about the subject`},{n:2,em:`✍️`,name:`Write identification and description paragraphs`},{n:3,em:`🔎`,name:`Check grammar, spelling, and word choice`}] },
+  { t:'klik', sub:'Memilih Kartu', ins:`Pilih kalimat yang SUDAH BENAR secara grammar!`,
+    opsi:[
+      {em:`🏖️`, t:`The beach very beautiful.`, b:false, msg:`Bukan ini, kalimat belum memiliki verb. Seharusnya: The beach is very beautiful.`},
+      {em:`🌊`, t:`It have a long white sand.`, b:false, msg:`Bukan ini, setelah it memakai has. Seharusnya: It has long white sand.`},
+      {em:`🚤`, t:`There is many boats near the beach.`, b:false, msg:`Bukan ini, boats jamak sehingga There are many boats.`},
+      {em:`🌴`, t:`The beach is very beautiful.`, b:true, msg:`Benar. Subjek tunggal memakai is.`}
+    ] },
+  { t:'urut', sub:'Mengurutkan', ins:`Urutkan langkah menulis descriptive text!`,
+    urut:[`Choose the subject to describe`,`Brainstorm details about the subject`,`Write the identification and description paragraphs`,`Revise and edit the text`] },
+  { t:'kumpul', sub:'Kumpulkan yang Benar', ins:`Ketuk hanya kalimat yang SUDAH BENAR! Hindari yang salah.`,
+    benar:[`She is very kind`,`It has big eyes`,`There are two trees`,`He looks tired`],
+    salah:[`She very kind`,`It have big eyes`,`There is two trees`,`He look tired`] },
+  { t:'sambung', sub:'Sambung Menulis Descriptive Text', ins:`Pilih lanjutan yang benar!`,
+    hasil:`To write a good descriptive text, brainstorm ideas, organize the details, write the draft, and revise the grammar and spelling.`,
+    steps:[
+      { prev:`Before writing, we collect ideas about the subject. This step is called ...`, benar:`brainstorming`, salah:[`revising`,`publishing`] },
+      { prev:`Describing a person from head to toe is one way to ... the details.`, benar:`organize`, salah:[`cancel`,`translate`] },
+      { prev:`The last step in writing is to ... the text for grammar and spelling.`, benar:`revise`, salah:[`draw`,`memorize`] }
+    ] }
+];
+
+/* --- 4) BERLATIH — 45 soal (9 topik x 5 ragam) --- */
+const B1 = '<span class="blank-slot" data-id="1">___</span>';
+const B2 = '<span class="blank-slot" data-id="2">___</span>';
+const dtLatih = [
+  /* ===== Topik 1 ===== */
+  { t:'pg',
+    stimulus:`<b>Read the text.</b><br>Rani is my classmate. She is tall and slim. She has long black hair and a round face. She is friendly and diligent.`,
+    soal:`What is the social function of the text?`,
+    opsi:[`To tell past events`,`To describe a particular person`,`To explain how to make something`,`To persuade readers to buy something`,`To report the news`], j:1,
+    msg:`The text describes one particular person (Rani), so its social function is to describe.` },
+  { t:'bs', soal:`A descriptive text tells a series of past events in chronological order.`, j:false, msg:`Salah. Menceritakan peristiwa masa lalu secara berurutan adalah ciri recount text, sedangkan descriptive text menggambarkan subjek tertentu.` },
+  { t:'drag_word', soal:`A descriptive text describes a ${B1} subject, and its social function is to ${B2} it.`, w:[`particular`,`describe`,`instruct`], j:[`particular`,`describe`], msg:`Descriptive text menggambarkan subjek tertentu (particular) dengan tujuan to describe.` },
+  { t:'pg_kompleks', soal:`Choose the subjects that are suitable for a descriptive text (more than one answer).`, opsi:[`My pet cat, Mochi`,`Tanah Lot Temple`,`How to make fried rice`,`My grandfather's old watch`,`What I did last holiday`], j:[0,1,3], msg:`Subjek tertentu seperti kucing peliharaan, Tanah Lot, dan jam kakek cocok untuk descriptive text. Cara memasak adalah procedure, dan liburan lalu adalah recount.` },
+  { t:'jodoh', soal:`Jodohkan jenis teks dengan tujuannya!`, pairs:[{n:1,t:`Descriptive text`},{n:2,t:`Procedure text`}], imgs:[{n:1,em:`🖼️`,name:`Describes what a subject looks like`},{n:2,em:`📋`,name:`Tells the steps to make or do something`}] },
+
+  /* ===== Topik 2 ===== */
+  { t:'pg',
+    stimulus:`<b>Read the text.</b><br>Bromo is an active volcano in East Java. It is surrounded by a vast sea of sand. Many tourists visit it at sunrise.`,
+    soal:`Which sentence is the identification of the text?`,
+    opsi:[`Bromo is an active volcano in East Java.`,`It is surrounded by a vast sea of sand.`,`Many tourists visit it at sunrise.`,`The text has no identification.`,`All sentences are identification.`], j:0,
+    msg:`Kalimat pertama memperkenalkan subjek (apa dan di mana), sehingga merupakan identification.` },
+  { t:'bs', soal:`The description part of a descriptive text introduces the subject for the first time.`, j:false, msg:`Salah. Yang memperkenalkan subjek adalah identification. Description berisi detail tentang subjek.` },
+  { t:'drag_word', soal:`The part that introduces the subject is the ${B1}, while the part that gives the details is the ${B2}.`, w:[`identification`,`description`,`recommendation`], j:[`identification`,`description`], msg:`Generic structure descriptive text: identification (memperkenalkan) dan description (merinci).` },
+  { t:'pg_kompleks', soal:`Lovina is a quiet beach in North Bali. Choose the sentences that belong to the DESCRIPTION part (more than one answer).`, opsi:[`Its sand is black and soft.`,`Lovina is a quiet beach in North Bali.`,`Visitors can see dolphins in the morning.`,`The water is calm and clear.`,`Lovina is located in Singaraja.`], j:[0,2,3], msg:`Pasir, lumba-lumba, dan air adalah detail (description). Kalimat tentang apa dan di mana Lovina berada adalah identification.` },
+  { t:'jodoh', soal:`Jodohkan bagian teks dengan contoh kalimatnya!`, pairs:[{n:1,t:`Identification`},{n:2,t:`Description`}], imgs:[{n:1,em:`🏷️`,name:`Komodo is a giant lizard from Indonesia.`},{n:2,em:`🔍`,name:`It has rough grey skin and sharp claws.`}] },
+
+  /* ===== Topik 3 ===== */
+  { t:'pg',
+    stimulus:`<b>Complete the text.</b><br>My brother ____ short curly hair. He ____ very funny.`,
+    soal:`Choose the correct pair of verbs to fill the blanks.`,
+    opsi:[`have – is`,`have – are`,`has – are`,`has – is`,`having – is`], j:3,
+    msg:`My brother (tunggal, he) memakai has untuk kepemilikan dan is sebagai verb be.` },
+  { t:'bs', soal:`We use simple present tense in descriptive texts because we describe facts and characteristics that are generally true.`, j:true, msg:`Benar. Ciri-ciri, keadaan, dan fakta tentang subjek dinyatakan dengan simple present tense.` },
+  { t:'drag_word', soal:`She ${B1} a round face and her eyes ${B2} big.`, w:[`has`,`are`,`have`], j:[`has`,`are`], msg:`She memakai has, sedangkan her eyes (jamak) memakai are.` },
+  { t:'pg_kompleks', soal:`Choose the CORRECT sentences (more than one answer).`, opsi:[`He has a big smile.`,`The flowers smell sweet.`,`She have long hair.`,`They is very friendly.`,`The room looks clean.`], j:[0,1,4], msg:`She have dan They is salah. Seharusnya She has long hair dan They are very friendly.` },
+  { t:'jodoh', soal:`Jodohkan jenis verb dengan penjelasannya!`, pairs:[{n:1,t:`Linking verb`},{n:2,t:`Verb "have/has"`}], imgs:[{n:1,em:`👀`,name:`look, seem, smell, taste, feel`},{n:2,em:`🤲`,name:`shows possession or parts: She has long hair`}] },
+
+  /* ===== Topik 4 ===== */
+  { t:'pg', soal:`Which noun phrase has the correct order of adjectives?`, opsi:[`a wooden brown small box`,`a brown wooden small box`,`a small wooden brown box`,`a small brown wooden box`,`a wooden small brown box`], j:3,
+    msg:`Urutannya: size (small) → colour (brown) → material (wooden) → noun.` },
+  { t:'bs', soal:`In the phrase "a big old house", the adjective "old" must come before "big".`, j:false, msg:`Salah. Size (big) harus mendahului age (old): a big old house.` },
+  { t:'drag_word', soal:`A word that describes a noun is an ${B1}, while a word that describes a verb is an ${B2}.`, w:[`adjective`,`adverb`,`noun`], j:[`adjective`,`adverb`], msg:`Adjective menerangkan noun, sedangkan adverb menerangkan verb.` },
+  { t:'pg_kompleks', soal:`Choose the adjectives in the sentence "The tall girl wears a beautiful red dress." (more than one answer)`, opsi:[`tall`,`girl`,`beautiful`,`red`,`wears`], j:[0,2,3], msg:`Tall, beautiful, dan red adalah adjective. Girl adalah noun dan wears adalah verb.` },
+  { t:'jodoh', soal:`Jodohkan jenis adjective dengan contohnya!`, pairs:[{n:1,t:`Opinion`},{n:2,t:`Colour`}], imgs:[{n:1,em:`💖`,name:`lovely, delicious, ugly`},{n:2,em:`🎨`,name:`green, yellow, black`}] },
+
+  /* ===== Topik 5 ===== */
+  { t:'pg',
+    stimulus:`<b>Read the text.</b><br>Putu is my neighbour. He is 17 years old. He is tall and muscular with short straight hair. He is honest, helpful, and always smiles at everyone.`,
+    soal:`Which sentence describes Putu's personality?`,
+    opsi:[`He is tall and muscular.`,`He has short straight hair.`,`He is honest, helpful, and always smiles at everyone.`,`He is 17 years old.`,`Putu is my neighbour.`], j:2,
+    msg:`Honest dan helpful adalah sifat (personality), bukan penampilan fisik.` },
+  { t:'bs', soal:`The sentence "She is diligent" describes physical appearance.`, j:false, msg:`Salah. Diligent (rajin) menggambarkan personality, bukan physical appearance.` },
+  { t:'drag_word', soal:`To describe hair we say "She ${B1} long wavy hair", and to describe height we say "She ${B2} tall".`, w:[`has`,`is`,`have`], j:[`has`,`is`], msg:`Rambut sebagai bagian tubuh memakai has, sedangkan tinggi badan sebagai keadaan memakai is.` },
+  { t:'pg_kompleks', soal:`Choose the words or phrases that describe PERSONALITY (more than one answer).`, opsi:[`diligent`,`curly hair`,`shy`,`tall and thin`,`generous`], j:[0,2,4], msg:`Diligent, shy, dan generous menggambarkan sifat. Curly hair dan tall and thin menggambarkan penampilan fisik.` },
+  { t:'jodoh', soal:`Jodohkan aspek deskripsi orang dengan contohnya!`, pairs:[{n:1,t:`Physical appearance`},{n:2,t:`Personality`}], imgs:[{n:1,em:`📏`,name:`tall, curly hair, brown eyes`},{n:2,em:`💛`,name:`kind, honest, funny`}] },
+
+  /* ===== Topik 6 ===== */
+  { t:'pg',
+    stimulus:`<b>Read the text.</b><br>Our school library is a quiet place behind the main hall. It has many shelves full of books. There are six wooden tables in the middle of the room. The air smells like old paper, and the only sound is the soft turning of pages.`,
+    soal:`The sentence "The air smells like old paper" appeals to the sense of ...`,
+    opsi:[`sight`,`hearing`,`smell`,`taste`,`touch`], j:2,
+    msg:`Smells berkaitan dengan indra penciuman (smell).` },
+  { t:'bs', soal:`The sentence "There are six wooden tables in the middle of the room" uses "are" because "tables" is plural.`, j:true, msg:`Benar. There are dipakai untuk benda jamak.` },
+  { t:'drag_word', soal:`The canteen is ${B1} the library and the gym. There ${B2} a big tree in front of it.`, w:[`between`,`is`,`are`,`under`], j:[`between`,`is`], msg:`Between dipakai untuk dua benda, dan a big tree tunggal sehingga memakai there is.` },
+  { t:'pg_kompleks', soal:`Choose the sentences that describe LOCATION (more than one answer).`, opsi:[`The temple is next to the river.`,`The temple is very old.`,`The market is opposite the bus station.`,`The market is noisy.`,`The school is behind the post office.`], j:[0,2,4], msg:`Next to, opposite, dan behind menyebutkan lokasi. Old dan noisy menggambarkan keadaan.` },
+  { t:'jodoh', soal:`Jodohkan aspek deskripsi tempat dengan contohnya!`, pairs:[{n:1,t:`Atmosphere`},{n:2,t:`Location`}], imgs:[{n:1,em:`🌅`,name:`quiet, crowded, peaceful`},{n:2,em:`📍`,name:`next to the river, in North Bali`}] },
+
+  /* ===== Topik 7 ===== */
+  { t:'pg',
+    stimulus:`<b>Read the text.</b><br>A pair of scissors is a tool for cutting paper. It has two metal blades and two plastic handles. The blades are sharp, so we must use them carefully.`,
+    soal:`What is the function of the object described?`,
+    opsi:[`To write on paper`,`To cut paper`,`To measure length`,`To stick paper together`,`To draw lines`], j:1,
+    msg:`Teks menyebutkan scissors adalah tool for cutting paper.` },
+  { t:'bs', soal:`The sentence "A cat has four legs, a tail, and sharp claws" gives details about the parts of the subject.`, j:true, msg:`Benar. Kalimat tersebut menjelaskan bagian-bagian tubuh kucing.` },
+  { t:'drag_word', soal:`A knife is ${B1} of metal and it is ${B2} to cut food.`, w:[`made`,`used`,`kept`], j:[`made`,`used`], msg:`Pola yang dipakai: is made of (bahan) dan is used to (fungsi).` },
+  { t:'pg_kompleks', soal:`Choose the words that describe MATERIAL (more than one answer).`, opsi:[`wooden`,`round`,`plastic`,`heavy`,`metal`], j:[0,2,4], msg:`Wooden, plastic, dan metal adalah bahan. Round adalah bentuk dan heavy menyatakan berat.` },
+  { t:'jodoh', soal:`Jodohkan aspek deskripsi hewan dengan penjelasannya!`, pairs:[{n:1,t:`Habitat`},{n:2,t:`Food`}], imgs:[{n:1,em:`🌳`,name:`The place where an animal lives`},{n:2,em:`🍖`,name:`What an animal eats`}] },
+
+  /* ===== Topik 8 ===== */
+  { t:'pg', soal:`Which sentence contains a simile?`, opsi:[`The classroom is a zoo.`,`He is the tallest boy in class.`,`This bag is heavier than that one.`,`Her voice is as sweet as honey.`,`She runs quickly.`], j:3,
+    msg:`Pola as ... as pada "as sweet as honey" adalah simile.` },
+  { t:'bs', soal:`A metaphor compares two things using the words "like" or "as".`, j:false, msg:`Salah. Yang memakai like atau as adalah simile. Metaphor membandingkan secara langsung.` },
+  { t:'drag_word', soal:`The comparative form of "tall" is ${B1}, and the superlative form is ${B2}.`, w:[`taller`,`the tallest`,`more tall`], j:[`taller`,`the tallest`], msg:`Adjective satu suku kata: tall, taller, the tallest.` },
+  { t:'pg_kompleks', soal:`Choose the sentences with the CORRECT comparison (more than one answer).`, opsi:[`This hill is higher than that hill.`,`She is more beautiful than her sister.`,`He is more taller than me.`,`Mount Agung is the highest mountain in Bali.`,`This book is the more interesting.`], j:[0,1,3], msg:`More taller dan the more interesting salah. Seharusnya taller than me dan the most interesting.` },
+  { t:'jodoh', soal:`Jodohkan gaya bahasa dengan contohnya!`, pairs:[{n:1,t:`Simile`},{n:2,t:`Metaphor`}], imgs:[{n:1,em:`💨`,name:`He runs as fast as the wind.`},{n:2,em:`🌙`,name:`The night sky was a black blanket.`}] },
+
+  /* ===== Topik 9 ===== */
+  { t:'pg',
+    stimulus:`<b>Read the text.</b><br>My bedroom is not big, but it is very comfortable. It has a small bed, a wooden desk, and a tall bookshelf. The walls are painted light blue. I love it because it always feels calm and peaceful.`,
+    soal:`Which statement about the text is TRUE?`,
+    opsi:[`It describes a particular place.`,`It tells how to arrange a room.`,`It reports a past event.`,`It persuades readers to buy furniture.`,`It explains why bedrooms are important.`], j:0,
+    msg:`Teks menggambarkan satu tempat tertentu, yaitu kamar tidur penulis.` },
+  { t:'bs', soal:`Revising a text means checking grammar, spelling, and word choice after writing the draft.`, j:true, msg:`Benar. Revisi dilakukan setelah draft selesai agar tulisan lebih baik.` },
+  { t:'drag_word', soal:`Before writing, we should ${B1} ideas about the subject, and after writing the draft, we ${B2} the text.`, w:[`brainstorm`,`revise`,`memorize`], j:[`brainstorm`,`revise`], msg:`Brainstorm dilakukan sebelum menulis, revise dilakukan setelah draft selesai.` },
+  { t:'pg_kompleks', soal:`Choose the good ways to make a description better (more than one answer).`, opsi:[`Use specific nouns and adjectives`,`Use sensory details`,`Use only simple words like "good" for everything`,`Organize details in a logical order`,`Change the tense randomly`], j:[0,1,3], msg:`Kata spesifik, detail pancaindra, dan urutan logis membuat deskripsi lebih hidup.` },
+  { t:'jodoh', soal:`Jodohkan langkah menulis dengan kegiatannya!`, pairs:[{n:1,t:`Brainstorm`},{n:2,t:`Revise`}], imgs:[{n:1,em:`💡`,name:`Collect ideas and details about the subject`},{n:2,em:`🔎`,name:`Check and improve the draft`}] }
+];
+
+/* --- 5) LAB MAYA — laboratorium bahasa virtual (3 eksperimen) --- */
+const LABMAYA = [
+  { judul:`Lab Klasifikasi`,
+    intro:`Ketuk sebuah kartu contoh, lalu ketuk tabung kategori yang menurutmu benar untuk memindahkannya!`,
+    percobaan:[
+      { nama:`Identification vs Description`, ket:`Generic structure`,
+        kat:[ {key:'ident',label:'Identification',desc:'Memperkenalkan subjek: apa/siapa/di mana'},
+              {key:'desc',label:'Description',desc:'Merinci bagian, sifat, dan ciri subjek'} ],
+        sampel:[ {t:`Lovina is a quiet beach in Bali.`,k:'ident'}, {t:`Komodo is a giant lizard.`,k:'ident'}, {t:`Its skin is rough and grey.`,k:'desc'}, {t:`The water is calm and clear.`,k:'desc'} ] },
+      { nama:`Appearance vs Personality`, ket:`Describing people`,
+        kat:[ {key:'phys',label:'Physical Appearance',desc:'Tinggi, rambut, mata, pakaian'},
+              {key:'pers',label:'Personality',desc:'Sifat dan karakter'} ],
+        sampel:[ {t:`She has curly hair.`,k:'phys'}, {t:`He is tall and slim.`,k:'phys'}, {t:`She is generous.`,k:'pers'}, {t:`He is very diligent.`,k:'pers'} ] },
+      { nama:`Opinion vs Fact Adjective`, ket:`Adjectives`,
+        kat:[ {key:'op',label:'Opinion Adjective',desc:'Pendapat penulis (beautiful, ugly)'},
+              {key:'fa',label:'Fact Adjective',desc:'Ukuran, bentuk, warna, bahan'} ],
+        sampel:[ {t:`beautiful`,k:'op'}, {t:`lovely`,k:'op'}, {t:`wooden`,k:'fa'}, {t:`round`,k:'fa'} ] },
+      { nama:`Correct vs Incorrect`, ket:`Simple present tense`,
+        kat:[ {key:'ok',label:'Correct',desc:'Grammar sudah benar'},
+              {key:'bad',label:'Incorrect',desc:'Masih ada kesalahan grammar'} ],
+        sampel:[ {t:`She has long hair.`,k:'ok'}, {t:`The room is clean.`,k:'ok'}, {t:`He have a big nose.`,k:'bad'}, {t:`They is friendly.`,k:'bad'} ] },
+      { nama:`Simile vs Metaphor`, ket:`Figurative language`,
+        kat:[ {key:'sim',label:'Simile',desc:'Memakai like atau as ... as'},
+              {key:'met',label:'Metaphor',desc:'Perbandingan langsung tanpa like/as'} ],
+        sampel:[ {t:`as bright as the sun`,k:'sim'}, {t:`as cold as ice`,k:'sim'}, {t:`The sea is a mirror.`,k:'met'}, {t:`The classroom is a zoo.`,k:'met'} ] }
+    ] },
+  { judul:`Bedah Teks Deskriptif`,
+    intro:`Ketuk tiap tab untuk menyorot bagian teks di bawah ini. Setelah itu, uji dirimu dengan menyusun paragraf di bagian paling bawah.`,
+    judulTeks:`Tanah Lot Temple`,
+    parts:[
+      { nama:`Identification`, label:`Memperkenalkan subjek`, warna:'#E63946',
+        desc:`Dua kalimat pertama memperkenalkan subjek: apa (sea temple), di mana (Tabanan, Bali), dan posisinya (on a large rock).`,
+        kal:[ `Tanah Lot Temple [[is]] a famous sea temple in Tabanan, Bali.`, `It [[stands]] on a large rock beside the ocean.` ] },
+      { nama:`Description 1`, label:`Penampilan dan suasana`, warna:'#F4A261',
+        desc:`Paragraf ini merinci penampilan dan suasana: pura terlihat indah saat matahari terbenam, langit oranye, dan ombaknya kuat.`,
+        kal:[ `The temple [[looks]] beautiful at sunset.`, `The sky [[turns]] orange and the waves [[are]] strong.` ] },
+      { nama:`Description 2`, label:`Aktivitas dan sekitarnya`, warna:'#2ECC71',
+        desc:`Bagian ini menjelaskan apa yang bisa dilakukan pengunjung dan apa saja yang ada di sekitarnya.`,
+        kal:[ `Many tourists [[take]] photos there every day.`, `At low tide, visitors [[can walk]] to the rock, but only worshippers [[can enter]] the main temple.`, `Next to it, there [[are]] small shops that [[sell]] souvenirs and snacks.` ] }
+    ],
+    lfDesc:`Perhatikan kata yang disorot: semua verb memakai <b>simple present tense</b> (is, stands, looks, turns, are, take, can walk, sell). Ada juga linking verb (looks), kata sifat (famous, beautiful, strong, small), dan <i>there are</i> untuk benda jamak.`,
+    urut:[`My classroom is a clean room on the second floor.`,`Inside, it has twelve tables, a whiteboard, and a big window.`,`Moreover, the walls are painted light blue.`,`Finally, we always feel comfortable studying there.`] },
+  { judul:`Language Features`,
+    intro:`Ketuk tiap kartu di bawah ini untuk membuka penjelasan beserta contohnya. Rangkuman ini melengkapi Lab 2.`,
+    tahap:[
+      { nama:`1. Simple Present Tense`, label:`Fakta dan ciri subjek`, warna:'#E63946',
+        desc:`Dipakai untuk menyatakan fakta, keadaan, dan ciri-ciri yang berlaku umum. Untuk he, she, it, verb diberi -s/-es.`,
+        cerita:`📌 <b>Contoh:</b> The sky turns orange. My cat sleeps all day. She has long hair.` },
+      { nama:`2. Adjectives & Noun Phrases`, label:`Kata sifat berurutan`, warna:'#F4A261',
+        desc:`Adjective menerangkan noun dan diletakkan sebelum noun. Urutan: opinion, size, age, shape, colour, origin, material.`,
+        cerita:`📌 <b>Contoh:</b> a lovely small old round brown wooden table.` },
+      { nama:`3. Be, Have, and Linking Verbs`, label:`Verb penghubung`, warna:'#2ECC71',
+        desc:`Be (am, is, are) untuk keadaan, have/has untuk kepemilikan atau bagian, dan linking verbs (look, seem, smell, taste, feel) untuk kesan indra.`,
+        cerita:`📌 <b>Contoh:</b> He is friendly. She has a round face. The soup tastes delicious.` },
+      { nama:`4. Specific Nouns & Sensory Words`, label:`Detail yang konkret`, warna:'#457B9D',
+        desc:`Pilih noun yang spesifik (golden retriever, bukan dog) dan manfaatkan lima indra agar pembaca bisa membayangkan.`,
+        cerita:`📌 <b>Contoh:</b> The air smells fresh and the waves sound soft.` },
+      { nama:`5. Comparison & Figurative Language`, label:`Perbandingan dan kiasan`, warna:'#8E44AD',
+        desc:`Gunakan comparative (higher than), superlative (the highest), simile (as ... as, like), dan metaphor agar deskripsi lebih hidup.`,
+        cerita:`📌 <b>Contoh:</b> Mount Agung is the highest mountain in Bali. Her voice is as sweet as honey.` }
+    ] }
+];
+
+/* ---- Placeholder gambar otomatis bila aset belum tersedia ---- */
+function imgErr(el){
+  el.onerror=null;
+  const label=(el.alt||'gambar').replace(/[<>&]/g,'').slice(0,26);
+  const svg="<svg xmlns='http://www.w3.org/2000/svg' width='320' height='220'><rect width='100%' height='100%' rx='18' fill='#F1F5F9' stroke='#CBD5E1' stroke-width='3' stroke-dasharray='9'/><text x='50%' y='42%' font-size='56' text-anchor='middle'>🖼️</text><text x='50%' y='72%' font-size='18' font-family='sans-serif' font-weight='bold' text-anchor='middle' fill='#64748B'>"+label+"</text></svg>";
+  el.src="data:image/svg+xml;utf8,"+encodeURIComponent(svg);
+}
+/* ---- Terapkan CONFIG ke tampilan ---- */
+function setTxt(id,v){ const e=document.getElementById(id); if(e) e.textContent=v; }
+function setSrc(id,v){ const e=document.getElementById(id); if(e) e.setAttribute('src',v); }
+function applyConfig(){
+  const C=CONFIG;
+  setTxt('cfg-fase',C.fase); setTxt('cfg-judul',C.judul); setTxt('cfg-subjudul',C.subJudul);
+  setSrc('cfg-logo',C.logo); setSrc('cfg-bgjudul',C.bgJudul); setTxt('cfg-judul-menu',C.judul);
+  setTxt('cfg-mapel',C.mapel); setTxt('cfg-unit',C.unit); setTxt('cfg-subunit',C.subUnit); setTxt('cfg-tp',C.tp);
+  setTxt('cfg-nama',C.profil.nama); setTxt('cfg-nama2',C.profil.nama); setTxt('cfg-pengampu',C.profil.nama);
+  setTxt('cfg-instansi',C.profil.instansi); setTxt('cfg-jenis',C.profil.jenis); setSrc('cfg-foto',C.profil.foto);
+  document.title=C.judul+' — MPI';
+}
+
+/* ---- 1) SCALING PANGGUNG 16:9 ---- */
+const stage = document.getElementById('stage');
+function resizeStage(){
+  const w = window.innerWidth, h = window.innerHeight;
+  const scale = Math.min(w/1280, h/720);
+  stage.style.transform = 'scale(' + scale + ')';
+  stage.style.left = ((w - 1280*scale)/2) + 'px';
+  stage.style.top  = ((h - 720*scale)/2) + 'px';
+}
+window.addEventListener('resize', resizeStage); resizeStage();
+
+/* ---- 2) AUDIO ---- */
+let soundOn = true, globalVolume = 1;
+const AUDIO = {};
+function loadAudio(key, src){ try{ const a=new Audio(src); a.preload='auto'; AUDIO[key]=a; }catch(e){} }
+loadAudio('bgm','./asset/audio/bgm.mp3'); if(AUDIO['bgm']) AUDIO['bgm'].loop = true;
+loadAudio('klik','./asset/audio/sfx_klik.mp3');
+loadAudio('benar','./asset/audio/sfx_benar.mp3');
+loadAudio('salah','./asset/audio/sfx_salah.mp3');
+loadAudio('transisi','./asset/audio/sfx_transisi.mp3');
+loadAudio('bintang','./asset/audio/sfx_bintang.mp3');
+function play(key){
+  if(!soundOn || globalVolume === 0) return;
+  const a = AUDIO[key]; if(!a) return;
+  try{ a.volume = globalVolume; if(key !== 'bgm') a.currentTime=0; const p=a.play(); if(p&&p.catch) p.catch(()=>{}); } catch(e){}
+}
+function changeVolume(val){
+  globalVolume = parseFloat(val);
+  const btn = document.getElementById('sound-toggle');
+  if (globalVolume === 0){ soundOn=false; btn.textContent='🔇'; }
+  else { soundOn=true; btn.textContent = globalVolume<0.5?'🔉':'🔊'; if(AUDIO['bgm'] && AUDIO['bgm'].paused) play('bgm'); }
+  for(let k in AUDIO){ if(AUDIO[k]) AUDIO[k].volume = globalVolume; }
+}
+function toggleSound(){
+  const slider = document.getElementById('volume-slider'); const btn = document.getElementById('sound-toggle');
+  if(soundOn){ soundOn=false; slider.value=0; btn.textContent='🔇'; for(let k in AUDIO){ if(AUDIO[k]){ AUDIO[k].volume=0; if(k==='bgm') AUDIO[k].pause(); } } }
+  else { soundOn=true; globalVolume = globalVolume===0?1:globalVolume; slider.value=globalVolume; btn.textContent='🔊'; for(let k in AUDIO){ if(AUDIO[k]) AUDIO[k].volume=globalVolume; } play('bgm'); }
+}
+document.addEventListener('click', function(e){
+  const t = e.target.closest('[data-sfx]'); if(t && t.getAttribute('data-sfx') !== 'no') play('klik');
+});
+
+/* ---- EFEK VISUAL ---- */
+function triggerSalah(){ const el=document.getElementById('efek-salah'); if(el){ el.classList.add('nyala'); setTimeout(()=>el.classList.remove('nyala'),50);} }
+function showConfetti(){
+  const container=document.getElementById('stage');
+  const colors=['#E63946','#F4A261','#2ECC71','#E74C3C','#ffffff'];
+  for(let i=0;i<60;i++){
+    const conf=document.createElement('div'); conf.className='confetti';
+    conf.style.left='50%'; conf.style.top='50%';
+    conf.style.backgroundColor=colors[Math.floor(Math.random()*colors.length)];
+    const angle=Math.random()*Math.PI*2, velocity=100+Math.random()*400;
+    conf.style.setProperty('--tx', (Math.cos(angle)*velocity)+'px');
+    conf.style.setProperty('--ty', (Math.sin(angle)*velocity-200)+'px');
+    if(Math.random()>0.5) conf.style.borderRadius='50%';
+    container.appendChild(conf); setTimeout(()=>conf.remove(),1500);
+  }
+}
+
+/* ---- IDENTITAS ---- */
+let infoMurid = { nama:"Murid Hebat", sekolah:"-" };
+function simpanIdentitas(){
+  const nm=document.getElementById('in-nama').value.trim();
+  const sk=document.getElementById('in-sekolah').value.trim();
+  const pesan=document.getElementById('login-pesan');
+  if(!nm){ pesan.style.display='block'; return; }
+  infoMurid.nama=nm; infoMurid.sekolah=sk||"-";
+  closeModal('modal-login'); play('bgm'); goMenu();
+}
+
+/* ---- CAPAIAN GABUNGAN (Bermain + Berlatih) & SERTIFIKAT ---- */
+const SKOR_MAKS_GABUNGAN = 225;
+let capaian = { bermain:false, berlatih:false, skorBermain:0, skorLatih:0 };
+function totalSkorGabungan(){ return capaian.skorBermain + capaian.skorLatih; }
+function cekCapaianGabungan(){
+  const kartu=document.getElementById('mc-sertifikat'), sub=document.getElementById('mc-sertifikat-sub');
+  if(!kartu) return;
+  if(capaian.bermain && capaian.berlatih){
+    kartu.classList.remove('terkunci');
+    sub.textContent = 'Skor: '+totalSkorGabungan()+' dari '+SKOR_MAKS_GABUNGAN+' — Ketuk untuk unduh';
+  } else {
+    kartu.classList.add('terkunci');
+    const sisa=[!capaian.bermain?'Bermain':null, !capaian.berlatih?'Berlatih':null].filter(Boolean).join(' & ');
+    sub.textContent = '🔒 Selesaikan '+sisa+' dulu';
+  }
+}
+function bukaSertifikatGabungan(){
+  if(!(capaian.bermain && capaian.berlatih)){ play('salah'); triggerSalah(); showFb0('mc-sertifikat'); return; }
+  unduhPiagam('Bermain & Berlatih', totalSkorGabungan()+' dari '+SKOR_MAKS_GABUNGAN);
+}
+function showFb0(id){ const el=document.getElementById(id); if(el){ el.classList.add('shake-sekali'); setTimeout(()=>el.classList.remove('shake-sekali'),400); } }
+function blokSertifikatGabungan(){
+  if(!(capaian.bermain && capaian.berlatih)) return '';
+  return `<div class="lab-cerita-box" style="max-width:640px;margin:20px auto 0;text-align:center;border-color:var(--emas-tua);">
+    <p style="font-size:19px;margin:0 0 10px;">🌟 <b>Selamat! Kamu telah menyelesaikan Bermain & Berlatih.</b></p>
+    <p style="font-size:22px;font-weight:900;color:var(--primary-tua);margin:0 0 12px;">Total Skor Gabungan: ${totalSkorGabungan()} dari ${SKOR_MAKS_GABUNGAN}</p>
+    <button class="btn btn-kuning" style="height:56px;padding:0 30px;font-size:19px" data-sfx onclick="bukaSertifikatGabungan()">🏅 Unduh Sertifikat Bermain & Berlatih</button>
+  </div>`;
+}
+
+
+/* ---- Visual emoji (pengganti gambar) ---- */
+function pairVis(p){ return p.em ? `<div class="em-pair">${p.em}</div>` : `<img src="${p.i}" class="img-pair" alt="${p.name}" onerror="imgErr(this)">`; }
+function objVis(o){ return o.em ? `<div class="em-obj">${o.em}</div>` : `<img src="${o.imgPath}" class="img-obj" alt="${o.t}" onerror="imgErr(this)">`; }
+
+/* ---- UTIL ---- */
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function getOffset(el, parent){ let top=0,left=0; while(el&&el!==parent){ top+=el.offsetTop; left+=el.offsetLeft; el=el.offsetParent; } return {top,left}; }
+function drawLine(el1, el2, containerId){
+  const wrap=document.getElementById(containerId);
+  if(!wrap) return;
+  let svg=wrap.querySelector('.jodoh-svg');
+  if(!svg){
+    svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('class','jodoh-svg');
+    svg.style.position='absolute'; svg.style.top='0'; svg.style.left='0'; svg.style.width='100%'; svg.style.height='100%'; svg.style.pointerEvents='none'; svg.style.zIndex='0';
+    wrap.appendChild(svg);
+  }
+  const o1=getOffset(el1,wrap), o2=getOffset(el2,wrap);
+  const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+  line.setAttribute('x1', o1.left+el1.offsetWidth); line.setAttribute('y1', o1.top+el1.offsetHeight/2);
+  line.setAttribute('x2', o2.left); line.setAttribute('y2', o2.top+el2.offsetHeight/2);
+  line.setAttribute('stroke','#27AE60'); line.setAttribute('stroke-width','5'); line.setAttribute('stroke-linecap','round'); line.setAttribute('class','jodoh-line');
+  svg.appendChild(line);
+}
+function setProgress(fillId, labelId, cur, total){ document.getElementById(fillId).style.width=(cur/total*100)+'%'; document.getElementById(labelId).textContent=cur+'/'+total; }
+function showFb(id,kind,msg){ const fb=document.getElementById(id); if(!fb) return; fb.className='feedback show '+kind; fb.innerHTML=msg; }
+
+/* ---- ROUTER ---- */
+function showScreen(id){
+  clearKumpul();
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const aw=document.getElementById('audio-widget'); if(aw) aw.style.display=(id==='scr-judul')?'none':'flex';
+  if(id!=='scr-judul') play('transisi'); resizeStage();
+}
+function goJudul(){ showScreen('scr-judul'); }
+function goMenu(){ showScreen('scr-menu'); }
+
+/* ============================================================
+   PIAGAM — sertifikat penyelesaian (nama otomatis, bisa diunduh)
+   ============================================================ */
+function wrapCanvasText(ctx,text,x,y,maxWidth,lineHeight){
+  const words=String(text).split(' '); let line=''; let yy=y;
+  for(let n=0;n<words.length;n++){
+    const test=line+words[n]+' ';
+    if(ctx.measureText(test).width>maxWidth && n>0){ ctx.fillText(line.trim(),x,yy); line=words[n]+' '; yy+=lineHeight; }
+    else line=test;
+  }
+  ctx.fillText(line.trim(),x,yy);
+  return yy;
+}
+function gambarBingkaiBatik(ctx,w,h){
+  const t=48;
+  ctx.save();
+  ctx.fillStyle='#780000';
+  ctx.fillRect(0,0,w,t); ctx.fillRect(0,h-t,w,t); ctx.fillRect(0,0,t,h); ctx.fillRect(w-t,0,t,h);
+  ctx.strokeStyle='#F1C40F'; ctx.lineWidth=4;
+  ctx.strokeRect(t-10,t-10,w-(t-10)*2,h-(t-10)*2);
+  /* motif parang (garis diagonal) di tepi atas & bawah */
+  ctx.strokeStyle='rgba(241,196,15,0.55)'; ctx.lineWidth=3;
+  for(let x=-h;x<w+h;x+=28){
+    ctx.beginPath(); ctx.moveTo(x,4); ctx.lineTo(x+t-8,t-4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x,h-t+4); ctx.lineTo(x+t-8,h-4); ctx.stroke();
+  }
+  /* motif kawung (lingkaran) di tepi kiri & kanan */
+  ctx.fillStyle='rgba(241,196,15,0.55)';
+  for(let y=26;y<h;y+=46){
+    ctx.beginPath(); ctx.arc(t/2,y,9,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(w-t/2,y,9,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+function unduhPiagam(jenis, hasilTeks){
+  play('bintang'); showConfetti();
+  const w=1600,h=1131;
+  const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#FFF8E7'; ctx.fillRect(0,0,w,h);
+  gambarBingkaiBatik(ctx,w,h);
+  ctx.textAlign='center';
+  ctx.fillStyle='#780000'; ctx.font='700 26px Georgia, serif';
+  ctx.fillText('S E R T I F I K A T   /   P I A G A M   P E N G H A R G A A N', w/2, 175);
+  ctx.fillStyle='#C1121F'; ctx.font='900 52px Georgia, serif';
+  ctx.fillText('MENYELESAIKAN '+jenis.toUpperCase(), w/2, 245);
+  ctx.fillStyle='#1A1A1A'; ctx.font='400 24px Georgia, serif';
+  ctx.fillText('Diberikan dengan bangga kepada:', w/2, 335);
+  ctx.fillStyle='#000'; ctx.font='900 68px Georgia, serif';
+  ctx.fillText(infoMurid.nama, w/2, 425);
+  ctx.strokeStyle='#F1C40F'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(w/2-260,450); ctx.lineTo(w/2+260,450); ctx.stroke();
+  ctx.fillStyle='#555'; ctx.font='600 24px Georgia, serif';
+  ctx.fillText('Asal Sekolah: '+infoMurid.sekolah, w/2, 495);
+  ctx.fillStyle='#1A1A1A'; ctx.font='400 25px Georgia, serif';
+  const yAkhir = wrapCanvasText(ctx, `Atas keberhasilan menyelesaikan aktivitas ${jenis} pada mata pelajaran ${CONFIG.mapel} materi "${CONFIG.judul}" dengan hasil ${hasilTeks}.`, w/2, 570, 1050, 36);
+  ctx.fillStyle='#555'; ctx.font='500 20px Georgia, serif';
+  const tgl=new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
+  ctx.fillText('Diberikan pada '+tgl, w/2, yAkhir+70);
+  ctx.fillStyle='#780000'; ctx.font='700 23px Georgia, serif';
+  ctx.fillText(CONFIG.profil.nama, w/2, h-150);
+  ctx.strokeStyle='#780000'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(w/2-180,h-172); ctx.lineTo(w/2+180,h-172); ctx.stroke();
+  ctx.fillStyle='#555'; ctx.font='400 18px Georgia, serif';
+  ctx.fillText(CONFIG.profil.instansi+' • '+CONFIG.mapel, w/2, h-122);
+  const link=document.createElement('a');
+  const namaFile='Piagam_'+jenis.replace(/\s+/g,'_')+'_'+infoMurid.nama.replace(/[^a-zA-Z0-9]+/g,'_')+'.png';
+  link.download=namaFile; link.href=canvas.toDataURL('image/png'); link.click();
+}
+
+/* ============================================================
+   BELAJAR — satu frame: gambar kiri, teks kanan
+   ============================================================ */
+const belajar = { step:0 };
+function startBelajar(){ belajar.step=0; showScreen('scr-belajar'); renderBelajar(); }
+function renderBelajar(){
+  const total=MATERI.length;
+  setProgress('belajar-pfill','belajar-plabel', belajar.step+1, total);
+  const m=MATERI[belajar.step];
+  document.getElementById('belajar-sub').textContent=m.judul;
+  document.getElementById('belajar-prev').textContent = belajar.step===0 ? "☰ Menu" : "◀ Sebelumnya";
+  document.getElementById('belajar-next').textContent = belajar.step===total-1 ? "Selesai ✔" : "Selanjutnya ▶";
+  let kuisHTML='';
+  if(m.kuis){
+    kuisHTML=`<div class="belajar-kuis">
+      <p class="bk-tanya">✨ Ayo Tebak! &nbsp; ${m.kuis.tanya}</p>
+      <div class="bk-opsi">
+        <button class="btn btn-kuning" style="padding:10px 20px;font-size:18px;" onclick="cekKuisMini(this, ${m.kuis.j===0})">${m.kuis.o[0]}</button>
+        <button class="btn btn-kuning" style="padding:10px 20px;font-size:18px;" onclick="cekKuisMini(this, ${m.kuis.j===1})">${m.kuis.o[1]}</button>
+      </div></div>`;
+  }
+  document.getElementById('belajar-content').innerHTML = `
+    <div class="belajar-frame">
+      <div class="belajar-img-sisi">${m.em ? `<div class="belajar-em">${m.em}</div>` : `<img src="${m.img}" alt="${m.judul}" onerror="imgErr(this)">`}</div>
+      <div class="belajar-teks-sisi">
+        <h2>${m.judul}</h2>
+        <div class="belajar-intro">${m.intro}</div>
+        <div class="belajar-isi">${m.isi}</div>
+        ${kuisHTML}
+      </div>
+    </div>`;
+}
+function cekKuisMini(btn, isBenar){
+  play('klik'); btn.parentNode.querySelectorAll('button').forEach(b=>b.disabled=true);
+  if(isBenar){ btn.style.background='var(--hijau-tua)'; btn.style.color='#fff'; btn.innerHTML+=' ✔️'; play('benar'); showConfetti(); }
+  else { btn.style.background='var(--salah)'; btn.style.color='#fff'; btn.innerHTML+=' ❌'; play('salah'); triggerSalah(); }
+}
+function belajarNext(){ if(belajar.step < MATERI.length-1){ belajar.step++; renderBelajar(); } else goMenu(); }
+function belajarPrev(){ if(belajar.step > 0){ belajar.step--; renderBelajar(); } else goMenu(); }
+
+/* ============================================================
+   LAB MAYA — laboratorium virtual interaktif
+   ============================================================ */
+let labmaya={step:0};
+function startLabMaya(){ labmaya.step=0; showScreen('scr-labmaya'); renderLabMayaTabs(); renderLabMaya(); }
+function renderLabMayaTabs(){
+  const tabs=document.getElementById('labmaya-tabs');
+  tabs.innerHTML = LABMAYA.map((l,i)=>`<button class="lab-tab ${i===labmaya.step?'aktif':''} ${i===2?'lab-tab-oren':''}" data-sfx onclick="gotoLabMaya(${i})">${i===2?'🍊':'🔬'} Lab ${i+1}: ${l.judul}</button>`).join('');
+}
+function gotoLabMaya(i){ labmaya.step=i; renderLabMayaTabs(); renderLabMaya(); }
+function renderLabMaya(){
+  setProgress('labmaya-pfill','labmaya-plabel', labmaya.step+1, LABMAYA.length);
+  const l=LABMAYA[labmaya.step];
+  document.getElementById('labmaya-sub').textContent=l.judul;
+  document.getElementById('labmaya-prev').textContent = labmaya.step===0 ? "☰ Menu" : "◀ Lab Sebelumnya";
+  document.getElementById('labmaya-next').textContent = labmaya.step===LABMAYA.length-1 ? "Selesai ✔" : "Lab Berikutnya ▶";
+  if(labmaya.step===0) renderLabSort(); else if(labmaya.step===1) renderLabSim(); else renderLabJelas();
+}
+function labMayaNext(){ if(labmaya.step < LABMAYA.length-1){ labmaya.step++; renderLabMayaTabs(); renderLabMaya(); } else goMenu(); }
+function labMayaPrev(){ if(labmaya.step > 0){ labmaya.step--; renderLabMayaTabs(); renderLabMaya(); } else goMenu(); }
+
+/* ---- LAB 1: laboratorium sortir — kartu diketuk lalu dipindah ke tabung ---- */
+let labSort={pIdx:0, sel:null, placed:[]};
+function renderLabSort(){
+  const l=LABMAYA[0];
+  labSort={pIdx:0, sel:null, placed:l.percobaan.map(()=>[])};
+  drawLabSort();
+}
+function drawLabSort(){
+  const l=LABMAYA[0]; const p=l.percobaan[labSort.pIdx];
+  const tabs=l.percobaan.map((pc,i)=>`<button class="lab-tab-mini ${i===labSort.pIdx?'aktif':''} ${labSort.placed[i] && labSort.placed[i].length===l.percobaan[i].sampel.length?'selesai':''}" data-sfx onclick="labSortGanti(${i})">${pc.nama}</button>`).join('');
+  const belumDipakai = p.sampel.filter((s,i)=>!labSort.placed[labSort.pIdx].includes(i));
+  const pool = p.sampel.map((s,i)=> labSort.placed[labSort.pIdx].includes(i) ? '' : `<button class="lab-sampel ${labSort.sel===i?'dipilih':''}" data-sfx onclick="labSortPilih(${i})">${s.t}</button>`).join('');
+  const tabungHTML = p.kat.map(kt=>{
+    const isiKat = p.sampel.map((s,i)=>({s,i})).filter(o=>o.s.k===kt.key && labSort.placed[labSort.pIdx].includes(o.i));
+    const isi = isiKat.map(o=>`<div class="tabung-item">${o.s.t}</div>`).join('');
+    return `<div class="lab-tabung" id="tb-${kt.key}" data-sfx onclick="labSortTaruh('${kt.key}')">
+        <div class="tabung-label">${kt.label}</div>
+        <div class="tabung-desc">${kt.desc}</div>
+        <div class="tabung-isi">${isi}</div>
+      </div>`;
+  }).join('');
+  document.getElementById('labmaya-content').innerHTML = `
+    <div class="lab-scroll">
+    <div class="lab-sort-head">
+      <h2>🧪 ${p.nama}</h2>
+      ${p.ket?`<small>${p.ket}</small>`:''}
+    </div>
+    <div class="lab-tabs-sub">${tabs}</div>
+    <p class="akt-instruksi" style="margin:0 auto 4px;">${l.intro}</p>
+    <div class="lab-sampel-pool">${pool || '<b style="color:var(--hijau-tua)">✅ Semua kartu pada percobaan ini sudah ditempatkan!</b>'}</div>
+    <div class="lab-tabung-wrap">${tabungHTML}</div>
+    <div class="feedback" id="lab-fb"></div>
+    </div>`;
+}
+function labSortGanti(i){ play('klik'); labSort.pIdx=i; labSort.sel=null; drawLabSort(); }
+function labSortPilih(i){ play('klik'); labSort.sel = (labSort.sel===i) ? null : i; drawLabSort(); }
+function labSortTaruh(key){
+  if(labSort.sel===null) return;
+  const l=LABMAYA[0]; const p=l.percobaan[labSort.pIdx]; const s=p.sampel[labSort.sel];
+  if(s.k===key){
+    play('benar'); labSort.placed[labSort.pIdx].push(labSort.sel); labSort.sel=null; drawLabSort();
+    showFb('lab-fb','ok','✅ <b>Tepat!</b> Contoh tersebut berhasil dimasukkan ke tabung yang benar.');
+    if(labSort.placed[labSort.pIdx].length===p.sampel.length){
+      showConfetti();
+      if(labSort.pIdx < l.percobaan.length-1) showFb('lab-fb','ok','🎉 <b>Percobaan selesai!</b> Ketuk tab percobaan berikutnya di atas.');
+      else showFb('lab-fb','ok','🎉 <b>Semua percobaan Lab 1 selesai!</b> Lanjut ke Lab 2 dengan tombol di bawah.');
+    }
+  } else {
+    play('salah'); triggerSalah();
+    const tb=document.getElementById('tb-'+key); if(tb){ tb.classList.add('goyang'); setTimeout(()=>tb.classList.remove('goyang'),400); }
+    showFb('lab-fb','no','❌ <b>Belum tepat.</b> Coba pikirkan kembali ciri kategorinya, lalu coba tabung lain.');
+  }
+}
+
+/* ---- LAB 2: simulasi tahapan Tuckman — avatar bergerak + susun urutan ---- */
+let labSim={sel:0};
+function renderLabSim(){
+  const l=LABMAYA[1], n=l.parts.length;
+  const tabs = l.parts.map((p,i)=>`<button class="lab-sim-dot" id="lsd-${i}" data-sfx onclick="labSimGoto(${i})">${p.nama}</button>`).join('')
+    + `<button class="lab-sim-dot" id="lsd-${n}" data-sfx onclick="labSimGoto(${n})">Language Features</button>`;
+  document.getElementById('labmaya-content').innerHTML = `
+    <div class="lab-scroll">
+    <p class="akt-instruksi" style="margin:0 auto 8px;">${l.intro}</p>
+    <div class="lab-sim-timeline">${tabs}</div>
+    <div class="lab-teks" id="lab-teks"></div>
+    <div class="lab-stage-card" id="lab-stage-card"></div>
+    <div class="lab-urut-box">
+      <h3>🧩 Uji Pemahaman: Susun Paragraf Deskriptif</h3>
+      <div id="lab-urut-area"></div>
+    </div>
+    </div>`;
+  labSimGoto(0);
+  initLabUrut();
+}
+function labSimGoto(i){
+  const l=LABMAYA[1], n=l.parts.length; labSim.sel=i;
+  for(let k=0;k<=n;k++){ const b=document.getElementById('lsd-'+k); if(b) b.classList.toggle('aktif', k===i); }
+  let html=`<div class="lab-teks-judul">${l.judulTeks}</div><p>`;
+  l.parts.forEach((p,k)=>{
+    p.kal.forEach(s=>{
+      const on = (i===k);
+      const cls = on ? 'on' : (i===n ? '' : 'off');
+      const sty = on ? `background:${p.warna}26;border-bottom:4px solid ${p.warna};` : '';
+      html += `<span class="lab-kal ${cls}" style="${sty}">${s.replace(/\[\[(.+?)\]\]/g,'<u class="lf">$1</u>')} </span>`;
+    });
+  });
+  html += '</p>';
+  const box=document.getElementById('lab-teks');
+  box.className = 'lab-teks' + (i===n ? ' lfmode' : '');
+  box.innerHTML = html;
+  const card=document.getElementById('lab-stage-card');
+  if(i<n){ const p=l.parts[i]; card.innerHTML=`<h3>${p.nama}: ${p.label}</h3><p>${p.desc}</p>`; card.style.borderLeftColor=p.warna; }
+  else { card.innerHTML=`<h3>Language Features: Simple Present Tense</h3><p>${l.lfDesc}</p>`; card.style.borderLeftColor='#B8860B'; }
+  play('klik');
+}
+function initLabUrut(){
+  const l=LABMAYA[1];
+  labSim.urutBenar = l.urut.slice();
+  do{ labSim.urutNow = shuffle(labSim.urutBenar); }while(labSim.urutNow.join('|')===labSim.urutBenar.join('|'));
+  drawLabUrut();
+}
+function drawLabUrut(){
+  let items='';
+  labSim.urutNow.forEach((t,i)=>{
+    items+=`<div class="urut-item"><span class="num">${i+1}</span><span>${t}</span>
+      <button class="btn btn-kuning" data-sfx onclick="moveLabUrut(${i},-1)" ${i===0?'disabled':''}>▲</button>
+      <button class="btn btn-kuning" data-sfx onclick="moveLabUrut(${i},1)" ${i===labSim.urutNow.length-1?'disabled':''}>▼</button></div>`;
+  });
+  document.getElementById('lab-urut-area').innerHTML = `<div>${items}</div><button class="btn btn-biru" style="height:52px;margin-top:10px;font-size:18px" data-sfx onclick="checkLabUrut()">Periksa Urutan</button><div class="feedback" id="lab-urut-fb"></div>`;
+}
+function moveLabUrut(i,dir){ play('klik'); const j=i+dir; if(j<0||j>=labSim.urutNow.length) return; [labSim.urutNow[i],labSim.urutNow[j]]=[labSim.urutNow[j],labSim.urutNow[i]]; drawLabUrut(); }
+function checkLabUrut(){
+  if(labSim.urutNow.join('|')===labSim.urutBenar.join('|')){ play('benar'); showConfetti(); showFb('lab-urut-fb','ok','✅ <b>Urutan tepat!</b> Kamu sudah memahami susunan teks deskriptif.'); }
+  else { play('salah'); triggerSalah(); showFb('lab-urut-fb','no','❌ <b>Belum tepat.</b> Coba susun ulang tahapannya!'); }
+}
+
+/* ---- LAB 3: penjelasan tahapan Tuckman — kartu akordeon (tema OREN) ---- */
+let labJelas={buka:0};
+function renderLabJelas(){ labJelas.buka=0; drawLabJelas(); }
+function drawLabJelas(){
+  const l=LABMAYA[2];
+  const kartu = l.tahap.map((t,i)=>`
+    <div class="lab-jelas-card ${labJelas.buka===i?'buka':''}" data-sfx onclick="toggleLabJelas(${i})">
+      <div class="lab-jelas-card-head">
+        <div class="lab-jelas-badge" style="background:${t.warna}">${i+1}</div>
+        <div class="lab-jelas-titik"><h3>${t.nama}</h3><small>${t.label}</small></div>
+        <div class="lab-jelas-panah">▾</div>
+      </div>
+      <div class="lab-jelas-body"><div class="lab-jelas-body-in">
+        <p>${t.desc}</p>
+        ${t.cerita?`<div class="lab-cerita-box">${t.cerita}</div>`:''}
+      </div></div>
+    </div>`).join('');
+  document.getElementById('labmaya-content').innerHTML = `
+    <div class="lab-scroll">
+    <div class="lab-jelas-head"><h2>🍊 ${l.judul}</h2></div>
+    <p class="akt-instruksi" style="margin:0 auto 4px;">${l.intro}</p>
+    <div class="lab-jelas-wrap">${kartu}</div>
+    </div>`;
+}
+function toggleLabJelas(i){ play('klik'); labJelas.buka = (labJelas.buka===i) ? -1 : i; drawLabJelas(); }
+
+/* ============================================================
+   BERMAIN — 45 permainan (jodoh / klik / urut / kumpul / sambung)
+   ============================================================ */
+let skorBermain=0, main={step:0}, activeGame=null;
+function tambahSkor(val){ skorBermain=Math.max(0,skorBermain+val); document.getElementById('skor-bermain-angka').textContent=skorBermain; }
+function startBermain(){ main.step=0; skorBermain=0; tambahSkor(0); showScreen('scr-bermain'); renderBermain(); }
+function bermainNext(){ if(main.step<dataBermain.length-1){ main.step++; renderBermain(); } else { clearKumpul(); renderSkorBermain(); } }
+function bermainPrev(){
+  clearKumpul();
+  document.querySelector('#scr-bermain .nav-back').textContent="◀ Sebelumnya";
+  document.getElementById('bermain-next').textContent="Selanjutnya ▶";
+  if(main.step>0){ main.step--; renderBermain(); } else goMenu();
+}
+function renderBermain(){
+  clearKumpul();
+  setProgress('bermain-pfill','bermain-plabel', main.step+1, dataBermain.length);
+  document.getElementById('bermain-next').disabled=true;
+  const game=dataBermain[main.step];
+  document.getElementById('bermain-sub').textContent='Permainan '+(main.step+1)+': '+game.sub;
+  if(game.t==='jodoh') initJodoh(game);
+  else if(game.t==='klik') initKlik(game);
+  else if(game.t==='urut') initUrut(game);
+  else if(game.t==='kumpul') initKumpul(game);
+  else if(game.t==='sambung') initSambung(game);
+}
+/* ---- JODOH ---- */
+function initJodoh(game){
+  activeGame={ s:null, c:0, total:game.pairs.length };
+  let kHTML='', rHTML='';
+  game.pairs.forEach(p=>{ kHTML+=`<div class="pair-item" data-side="kiri" data-n="${p.n}" onclick="handleJodoh(this)">${p.teks}</div>`; });
+  shuffle(game.imgs).forEach(p=>{ rHTML+=`<div class="pair-item" data-side="kanan" data-n="${p.n}" onclick="handleJodoh(this)">${pairVis(p)}<span>${p.name}</span></div>`; });
+  document.getElementById('bermain-content').innerHTML=`<div class="center-col" style="z-index:10;"><p class="akt-instruksi">${game.ins}</p><div class="jodoh-wrap" id="jw-main"><div class="jodoh-kol">${kHTML}</div><div class="jodoh-kol">${rHTML}</div></div><div class="feedback" id="play-fb"></div></div>`;
+}
+function handleJodoh(el){
+  if(el.classList.contains('locked')) return;
+  if(el.dataset.side==='kiri'){ document.querySelectorAll('#bermain-content [data-side="kiri"]').forEach(x=>x.classList.remove('sel')); el.classList.add('sel'); activeGame.s=el; play('klik'); return; }
+  if(!activeGame.s){ showFb('play-fb','no','❌ Pilih kotak di sebelah kiri dahulu.'); return; }
+  if(el.dataset.n===activeGame.s.dataset.n){
+    play('benar'); tambahSkor(10); showConfetti();
+    el.classList.add('locked'); activeGame.s.classList.add('locked'); drawLine(activeGame.s,el,'jw-main');
+    activeGame.s.classList.remove('sel'); activeGame.s=null; activeGame.c++;
+    showFb('play-fb','ok','✅ <b>Cocok! (+10 poin)</b>');
+    if(activeGame.c===activeGame.total){ document.getElementById('bermain-next').disabled=false; showFb('play-fb','ok','🎉 <b>Hebat! Semua berhasil dicocokkan.</b>'); }
+  } else {
+    play('salah'); tambahSkor(-5); triggerSalah(); el.classList.add('salah'); setTimeout(()=>el.classList.remove('salah'),400);
+    showFb('play-fb','no','❌ <b>Belum tepat (-5 poin).</b>');
+  }
+}
+/* ---- KLIK ---- */
+function initKlik(game){
+  const opsi=shuffle(game.opsi);
+  activeGame={ c:0, total:game.opsi.filter(o=>o.b).length };
+  let html='';
+  opsi.forEach((o,i)=> html+=`<div class="obj-card" id="oc-${i}">${objVis(o)}<span>${o.t}</span></div>`);
+  document.getElementById('bermain-content').innerHTML=`<div class="center-col"><p class="akt-instruksi">${game.ins}</p><div class="scene-grid">${html}</div><div class="feedback" id="play-fb"></div></div>`;
+  opsi.forEach((o,i)=>{ const el=document.getElementById('oc-'+i); el.onclick=()=>handleKlik(el,o.b,o.msg); });
+}
+function handleKlik(el,isBenar,msg){
+  if(el.classList.contains('benar')||el.classList.contains('salah')) return;
+  if(isBenar){
+    play('benar'); tambahSkor(20); showConfetti(); el.classList.add('benar'); activeGame.c++;
+    showFb('play-fb','ok',`✅ <b>Tepat! (+20 poin)</b><br>${msg}`);
+    if(activeGame.c===activeGame.total) document.getElementById('bermain-next').disabled=false;
+  } else {
+    play('salah'); tambahSkor(-5); el.classList.add('salah'); triggerSalah();
+    showFb('play-fb','no',`❌ <b>Kurang tepat (-5 poin).</b><br>${msg}`);
+    setTimeout(()=>el.classList.remove('salah'),500);
+  }
+}
+/* ---- URUT ---- */
+function initUrut(game){ activeGame={g:game}; do{ activeGame.now=shuffle(game.urut); }while(activeGame.now.join('|')===game.urut.join('|')); drawUrutUI(); }
+function drawUrutUI(){
+  let items='';
+  activeGame.now.forEach((t,i)=>{
+    items+=`<div class="urut-item"><span class="num">${i+1}</span><span>${t}</span>
+      <button class="btn btn-kuning" onclick="moveUrut(${i},-1)" ${i===0?'disabled':''}>▲</button>
+      <button class="btn btn-kuning" onclick="moveUrut(${i},1)" ${i===activeGame.now.length-1?'disabled':''}>▼</button></div>`;
+  });
+  document.getElementById('bermain-content').innerHTML=`<div class="center-col" style="justify-content:flex-start; overflow-y:auto;"><p class="akt-instruksi" style="margin-bottom:10px;">${activeGame.g.ins}</p><div style="width:100%;">${items}</div><button class="btn btn-biru" style="height:60px;margin-top:10px;font-size:22px" onclick="checkUrut()">Periksa Urutan</button><div class="feedback" id="play-fb"></div></div>`;
+}
+function moveUrut(i,dir){ play('klik'); const j=i+dir; if(j<0||j>=activeGame.now.length) return; [activeGame.now[i],activeGame.now[j]]=[activeGame.now[j],activeGame.now[i]]; drawUrutUI(); }
+function checkUrut(){
+  if(activeGame.now.join('|')===activeGame.g.urut.join('|')){ play('benar'); tambahSkor(20); showConfetti(); showFb('play-fb','ok','✅ <b>Urutan tepat! (+20 poin)</b>'); document.getElementById('bermain-next').disabled=false; }
+  else { play('salah'); tambahSkor(-5); triggerSalah(); showFb('play-fb','no','❌ <b>Belum tepat (-5 poin).</b> Coba lagi!'); }
+}
+/* ---- KUMPUL (ketuk berwaktu) ---- */
+let kumpulTimer=null, kumpulSpawn=null, kumpulCollected=0, kumpulTime=0, activeKumpul={benar:'',salah:[]};
+function clearKumpul(){ if(kumpulTimer){clearInterval(kumpulTimer);kumpulTimer=null;} if(kumpulSpawn){clearInterval(kumpulSpawn);kumpulSpawn=null;} }
+function initKumpul(game){
+  clearKumpul(); kumpulCollected=0; kumpulTime=30; activeKumpul={ benar:game.benar, salah:game.salah||[] };
+  document.getElementById('bermain-content').innerHTML=`
+    <div class="center-col" style="justify-content:flex-start;">
+      <p class="akt-instruksi">${game.ins}</p>
+      <div class="kumpul-hud"><div class="hud-box hud-time">⏱️ <span id="kumpul-time">30</span> dtk</div><div class="hud-box hud-coll">⭐ Terkumpul: <span id="kumpul-coll">0</span></div></div>
+      <div class="kumpul-area" id="kumpul-area"></div>
+      <div class="feedback" id="play-fb"></div>
+    </div>`;
+  kumpulTimer=setInterval(()=>{ kumpulTime--; const t=document.getElementById('kumpul-time'); if(t)t.textContent=kumpulTime; if(kumpulTime<=0) endKumpul(); },1000);
+  kumpulSpawn=setInterval(spawnFlag,1000); spawnFlag(); spawnFlag(); spawnFlag();
+}
+function spawnFlag(){
+  const area=document.getElementById('kumpul-area'); if(!area) return;
+  const benar=Math.random()<0.55;
+  const pool = (benar || !activeKumpul.salah.length) ? activeKumpul.benar : activeKumpul.salah;
+  const teks = pool[Math.floor(Math.random()*pool.length)];
+  const isBenar = pool===activeKumpul.benar;
+  const f=document.createElement('div'); f.className='kumpul-flag';
+  f.innerHTML=`<div class="kumpul-chip">${teks}</div>`;
+  const maxX=Math.max(0,area.clientWidth-250), maxY=Math.max(0,area.clientHeight-80);
+  f.style.left=(Math.random()*maxX)+'px'; f.style.top=(Math.random()*maxY)+'px';
+  f.onclick=()=>tapFlag(f,isBenar); area.appendChild(f);
+  setTimeout(()=>{ if(f.parentNode) f.remove(); },2800);
+}
+function tapFlag(f,benar){
+  if(!f.parentNode) return;
+  if(benar){ play('benar'); kumpulCollected++; tambahSkor(5); const c=document.getElementById('kumpul-coll'); if(c)c.textContent=kumpulCollected; f.remove(); }
+  else { play('salah'); tambahSkor(-3); triggerSalah(); f.style.filter='grayscale(1) brightness(0.7)'; setTimeout(()=>{ if(f.parentNode) f.remove(); },200); }
+}
+function endKumpul(){
+  clearKumpul();
+  const area=document.getElementById('kumpul-area');
+  if(area) area.innerHTML=`<div style="display:flex;height:100%;align-items:center;justify-content:center;flex-direction:column;gap:10px;"><div style="font-size:64px;">🎉</div><div style="font-size:30px;font-weight:900;color:var(--primary-tua);">Waktu Habis!</div></div>`;
+  showConfetti(); play('bintang');
+  showFb('play-fb','ok',`⭐ <b>Kamu mengumpulkan ${kumpulCollected} objek benar!</b> Tekan Selanjutnya ▶`);
+  document.getElementById('bermain-next').disabled=false;
+}
+/* ---- SAMBUNG ---- */
+let sambungStep=0, activeSambung=null;
+function initSambung(game){ sambungStep=0; activeSambung=game; drawSambung(); }
+function drawSambung(){
+  const g=activeSambung;
+  if(sambungStep>=g.steps.length){
+    document.getElementById('bermain-content').innerHTML=`<div class="center-col"><div class="akhir" style="flex:none;"><div style="font-size:60px;">🎯</div><h2 style="font-size:34px;">Lengkap!</h2><div class="sambung-lirik" style="font-size:22px;margin-top:10px;">${g.hasil}</div><p style="font-size:20px;margin-top:14px;">Hebat! Tekan <b>Selanjutnya ▶</b></p></div></div>`;
+    return;
+  }
+  const s=g.steps[sambungStep];
+  let btns=''; shuffle([s.benar,...s.salah]).forEach(o=> btns+=`<button class="sambung-btn" onclick="cekSambung(this, ${o===s.benar})">${o}</button>`);
+  document.getElementById('bermain-content').innerHTML=`<div class="center-col"><p class="akt-instruksi">${g.ins} (${sambungStep+1}/${g.steps.length})</p><div class="sambung-lirik">${s.prev}</div><div class="sambung-opsi">${btns}</div><div class="feedback" id="play-fb"></div></div>`;
+}
+function cekSambung(btn,benar){
+  document.querySelectorAll('.sambung-btn').forEach(b=>b.style.pointerEvents='none');
+  if(benar){
+    btn.classList.add('benar'); play('benar'); tambahSkor(10); showConfetti(); showFb('play-fb','ok','✅ <b>Tepat! (+10 poin)</b>');
+    sambungStep++;
+    setTimeout(()=>{ if(sambungStep>=activeSambung.steps.length) document.getElementById('bermain-next').disabled=false; drawSambung(); },900);
+  } else {
+    btn.classList.add('salah'); play('salah'); tambahSkor(-5); triggerSalah(); showFb('play-fb','no','❌ <b>Belum tepat (-5 poin).</b> Coba lagi!');
+    setTimeout(()=> document.querySelectorAll('.sambung-btn').forEach(b=>{ b.style.pointerEvents='auto'; b.classList.remove('salah'); }),800);
+  }
+}
+function renderSkorBermain(){
+  document.getElementById('bermain-sub').textContent='Selesai';
+  document.getElementById('bermain-next').disabled=true; play('bintang');
+  capaian.bermain=true; capaian.skorBermain=skorBermain; cekCapaianGabungan();
+  document.getElementById('bermain-content').innerHTML=`
+    <div class="akhir"><h2>🏆 Permainan Selesai!</h2>
+      <div class="identitas">${infoMurid.nama} • ${infoMurid.sekolah}</div>
+      <p style="font-size:24px;margin-top:20px;">Total Skor Bermain Kamu:</p>
+      <p class="skor-angka">${skorBermain}</p>
+      <button class="btn btn-kuning" style="height:60px;padding:0 34px;font-size:20px;margin-top:6px" onclick="unduhPiagam('Bermain', skorBermain+' Poin')">🎓 Unduh Piagam Penyelesaian</button>
+      <div style="display:flex;gap:20px;margin-top:20px">
+        <button class="btn btn-biru" style="height:60px;padding:0 30px;font-size:20px" onclick="startBermain()">🔄 Main Lagi</button>
+        <button class="btn btn-merah" style="height:60px;padding:0 30px;font-size:20px" onclick="goMenu()">☰ Menu Utama</button>
+      </div>
+      ${blokSertifikatGabungan()}
+      </div>`;
+}
+
+/* ============================================================
+   BERLATIH — 45 soal (pg / bs / drag_word / pg_kompleks / jodoh)
+   ============================================================ */
+let latih={ step:0, skor:0, state:[] };
+function startBerlatih(){ latih={step:0,skor:0,state:[]}; dtLatih.forEach((_,i)=>latih.state[i]={done:false,attempted:false}); showScreen('scr-berlatih'); renderBerlatih(); }
+function berlatihNext(){ if(latih.step<dtLatih.length){ latih.step++; renderBerlatih(); } }
+function berlatihPrev(){
+  document.querySelector('#scr-berlatih .nav-back').textContent="◀ Sebelumnya";
+  document.getElementById('berlatih-next').textContent="Selanjutnya ▶";
+  if(latih.step>0){ latih.step--; renderBerlatih(); } else goMenu();
+}
+function lockLatih(){ document.querySelectorAll('.opsi, .bs-btn, .opsi-kompleks, .word-btn, .pair-item, #btn-cek').forEach(el=>el.style.pointerEvents='none'); }
+function restoreFeedback(q){ if(latih.state[latih.step].done){ setTimeout(()=>{ showFb('bl-fb','ok',`✅ <b>Sudah dijawab benar!</b><br>${q.msg||''}`); lockLatih(); },50); } }
+function renderBerlatih(){
+  if(latih.step>=dtLatih.length){ renderSkorLatih(); return; }
+  setProgress('berlatih-pfill','berlatih-plabel', latih.step+1, dtLatih.length);
+  document.getElementById('berlatih-next').disabled=!latih.state[latih.step].done;
+  const q=dtLatih[latih.step], c=document.getElementById('berlatih-content');
+  if(q.t==='pg') r_PG(c,q);
+  else if(q.t==='bs') r_BS(c,q);
+  else if(q.t==='pg_kompleks') r_PG_Komp(c,q);
+  else if(q.t==='drag_word') r_Drag(c,q);
+  else if(q.t==='jodoh') r_JodohLatih(c,q);
+  restoreFeedback(q);
+}
+function ulangiLatih(){ play('klik'); renderBerlatih(); }
+function evLatih(benar){
+  const q=dtLatih[latih.step], st=latih.state[latih.step];
+  if(benar){ st.done=true; if(!st.attempted) latih.skor++; play('benar'); showConfetti(); showFb('bl-fb','ok',`✅ <b>Benar!</b><br>${q.msg||''}`); document.getElementById('berlatih-next').disabled=false; lockLatih(); }
+  else { st.attempted=true; play('salah'); triggerSalah(); showFb('bl-fb','no',`❌ <b>Kurang tepat.</b><br>${q.msg||''}<div style="margin-top:14px;"><button class="btn btn-kuning" style="height:48px;padding:0 30px;font-size:18px" onclick="ulangiLatih()">🔄 Coba Lagi</button></div>`); lockLatih(); }
+}
+/* Sisi kiri (pertanyaan + gambar/stimulus opsional) untuk tata letak dua sisi */
+function soalKiri(q){
+  const gbr  = q.img      ? `<img src="${q.img}" class="soal-img" alt="Ilustrasi soal" onerror="imgErr(this)">` : '';
+  const stim = q.stimulus ? `<div class="soal-stimulus">${q.stimulus}</div>` : '';
+  return `<div class="soal-kiri"><div class="soal-label">Pertanyaan</div>${stim}<div class="soal-teks">${q.soal}</div>${gbr}</div>`;
+}
+function r_PG(c,q){
+  let opsi='';
+  q.opsi.forEach((o,i)=> opsi+=`<div class="opsi ${latih.state[latih.step].done && i===q.j ? 'benar':''}" onclick="if(!latih.state[latih.step].done){ play('klik'); this.classList.add(${i===q.j}?'benar':'salah'); evLatih(${i===q.j}); }"><span class="bul">${String.fromCharCode(65+i)}</span>${o}</div>`);
+  c.innerHTML=`<div class="soal-split">${soalKiri(q)}<div class="opsi-kanan"><div class="opsi-list">${opsi}</div><div class="feedback" id="bl-fb"></div></div></div>`;
+}
+function r_BS(c,q){
+  c.innerHTML=`<div class="center-col"><div class="soal">${q.soal}</div><div class="bs-grid"><button class="bs-btn bs-benar" onclick="if(!latih.state[latih.step].done){ play('klik'); evLatih(${true===q.j}); }">✔ BENAR</button><button class="bs-btn bs-salah" onclick="if(!latih.state[latih.step].done){ play('klik'); evLatih(${false===q.j}); }">✘ SALAH</button></div><div class="feedback" id="bl-fb"></div></div>`;
+}
+function r_PG_Komp(c,q){
+  latih.temp=[]; let opsi='';
+  q.opsi.forEach((o,i)=> opsi+=`<div class="opsi opsi-kompleks" id="pk-${i}" onclick="toggleKomp(${i})"><span class="bul">${String.fromCharCode(65+i)}</span>${o}</div>`);
+  c.innerHTML=`<div class="soal-split">${soalKiri(q)}<div class="opsi-kanan"><div class="opsi-list">${opsi}</div><button class="btn btn-biru" id="btn-cek" style="height:50px;margin-top:4px;font-size:19px" onclick="cekKomp()">Periksa Jawaban</button><div class="feedback" id="bl-fb"></div></div></div>`;
+}
+function toggleKomp(i){ if(latih.state[latih.step].done) return; const el=document.getElementById(`pk-${i}`); play('klik'); el.classList.toggle('terpilih'); const idx=latih.temp.indexOf(i); if(idx>-1) latih.temp.splice(idx,1); else latih.temp.push(i); }
+function cekKomp(){
+  const q=dtLatih[latih.step];
+  const benar=latih.temp.length===q.j.length && latih.temp.every(v=>q.j.includes(v));
+  if(benar){ document.querySelectorAll('.opsi-kompleks').forEach((el,i)=>{ if(q.j.includes(i)) el.classList.add('benar'); }); }
+  evLatih(benar);
+}
+function r_Drag(c,q){
+  let words=''; q.w.forEach((w,i)=> words+=`<button class="word-btn" id="wb-${i}" onclick="tapWord(this, '${w.replace(/'/g,"\\'")}')">${w}</button>`);
+  c.innerHTML=`<div class="center-col"><div class="kalimat-drag" id="k-drag">${q.soal}</div><div class="word-pool">${words}</div><button class="btn btn-biru" id="btn-cek" style="height:56px;margin-top:20px;font-size:20px" onclick="cekDrag()">Periksa</button><div class="feedback" id="bl-fb"></div></div>`;
+  setTimeout(()=> document.querySelectorAll('#k-drag .blank-slot').forEach(b=>b.addEventListener('click',()=>tapBlank(b))),50);
+}
+function tapWord(btn,w){
+  if(latih.state[latih.step].done) return;
+  const blanks=Array.from(document.querySelectorAll('#k-drag .blank-slot'));
+  const target=blanks.find(b=>!b.classList.contains('terisi'));
+  if(target){ play('klik'); target.textContent=w; target.classList.add('terisi'); btn.classList.add('dipakai'); target.dataset.wb=btn.id; }
+}
+function tapBlank(blank){
+  if(latih.state[latih.step].done || !blank.classList.contains('terisi')) return;
+  play('klik'); const btn=document.getElementById(blank.dataset.wb); if(btn) btn.classList.remove('dipakai');
+  blank.textContent='___'; blank.classList.remove('terisi'); delete blank.dataset.wb;
+}
+function cekDrag(){
+  const q=dtLatih[latih.step];
+  const ans=Array.from(document.querySelectorAll('#k-drag .blank-slot')).map(b=>b.textContent.trim());
+  evLatih(ans.join('|')===q.j.join('|'));
+}
+function r_JodohLatih(c,q){
+  activeGame={ s:null, c:0, t:q.pairs.length };
+  let k='', r='';
+  shuffle(q.pairs).forEach(p=>{ k+=`<div class="pair-item" data-side="kiri" data-n="${p.n}" onclick="latJodohLatih(this)"><span>${p.t}</span></div>`; });
+  shuffle(q.imgs).forEach(p=>{ r+=`<div class="pair-item" data-side="kanan" data-n="${p.n}" onclick="latJodohLatih(this)">${pairVis(p)}<span>${p.name}</span></div>`; });
+  c.innerHTML=`<div class="center-col" style="z-index:10;"><div class="soal">${q.soal}</div><div class="jodoh-wrap" id="jw-latih"><div class="jodoh-kol">${k}</div><div class="jodoh-kol">${r}</div></div><div class="feedback" id="bl-fb"></div></div>`;
+}
+function latJodohLatih(el){
+  if(latih.state[latih.step].done || el.classList.contains('locked')) return;
+  if(el.dataset.side==='kiri'){ document.querySelectorAll('#berlatih-content [data-side="kiri"]').forEach(x=>x.classList.remove('sel')); el.classList.add('sel'); activeGame.s=el; play('klik'); return; }
+  if(!activeGame.s) return;
+  if(el.dataset.n===activeGame.s.dataset.n){
+    play('klik'); el.classList.add('locked'); activeGame.s.classList.add('locked','benar'); drawLine(activeGame.s,el,'jw-latih');
+    activeGame.s.classList.remove('sel'); activeGame.s=null; activeGame.c++;
+    if(activeGame.c===activeGame.t) evLatih(true);
+  } else { evLatih(false); }
+}
+function renderSkorLatih(){
+  document.getElementById('berlatih-sub').textContent='Selesai';
+  document.getElementById('berlatih-next').disabled=true;
+  const total=dtLatih.length, persen=Math.round(latih.skor/total*100);
+  let pesan = persen>=80?'🎉 <b>Luar biasa! Pemahamanmu sudah sangat baik.</b>' : persen>=50?'Bagus! Ayo pelajari lagi bagian yang belum tepat.' : 'Tetap semangat! Ulangi materi Belajar lalu kerjakan lagi.';
+  play('bintang');
+  capaian.berlatih=true; capaian.skorLatih=latih.skor; cekCapaianGabungan();
+  document.getElementById('berlatih-content').innerHTML=`
+    <div class="akhir"><h2>Kerja Bagus, Murid Hebat!</h2>
+      <div class="identitas">${infoMurid.nama} • ${infoMurid.sekolah}</div>
+      <p style="font-size:24px;margin-top:20px;">Jawaban benarmu:</p>
+      <p class="skor-angka">${latih.skor} <span style="font-size:40px;color:var(--tinta)">dari ${total}</span></p>
+      <p style="font-size:26px;font-weight:800;color:var(--primary);margin:0 0 10px;">Skor Akhir: ${persen}</p>
+      <p style="font-size:20px;margin-bottom:10px;">${pesan}</p>
+      <button class="btn btn-kuning" style="height:60px;padding:0 34px;font-size:20px;margin-bottom:6px" onclick="unduhPiagam('Berlatih', '${latih.skor} dari ${total} ('+${persen}+'%)')">🎓 Unduh Piagam Penyelesaian</button>
+      <div style="display:flex;gap:20px;margin-top:10px">
+        <button class="btn btn-biru" style="height:60px;padding:0 30px;font-size:20px" onclick="startBerlatih()">🔄 Ulangi Ujian</button>
+        <button class="btn btn-merah" style="height:60px;padding:0 30px;font-size:20px" onclick="goMenu()">☰ Menu Utama</button>
+      </div>
+      ${blokSertifikatGabungan()}
+      </div>`;
+}
+
+/* ---- MODAL ---- */
+function openModal(id){ document.getElementById(id).classList.add('show'); play('transisi'); }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); play('klik'); }
+document.querySelectorAll('.modal-bg').forEach(m=>{ m.addEventListener('click', e=>{ if(e.target===m) closeModal(m.id); }); });
+
+/* ---- INISIALISASI ---- */
+applyConfig();
+cekCapaianGabungan();
+</script>
+</body>
+</html>
